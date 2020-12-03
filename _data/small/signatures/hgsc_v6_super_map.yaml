@@ -9,6 +9,6 @@ Myeloid.super:
   - "Mast.cell"
 Fibroblast.super:
   - "Endothelial.cell"
-  - "Fibroblast""
+  - "Fibroblast"
 Ovarian.cancer.cell.super: 
   - "Ovarian.cancer.cell"
