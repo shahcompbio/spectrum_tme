@@ -1,0 +1,643 @@
+T.cell:
+  CD4.T.naive:
+  - CD4
+  - IL7R
+  - CCR7
+  - KLF2
+  - TCF7
+  CD4.T.dysfunctional:
+  - CD4
+  - CXCL13
+  - CTLA4
+  - PDCD1
+  - TOX2
+  - NMB
+  - FKBP5
+  - NR3C1
+  - MAF
+  - IL6ST
+  - ITM2A
+  - CD40LG
+  - TSHZ2
+  - TNFRSF4
+  CD4.T.reg:
+  - CD4
+  - FOXP3
+  - IL2RA
+  - TNFRSF4
+  - TRAC
+  CD8.T:
+  - CD8A
+  - CD8B
+  - GZMA
+  - GZMB
+  - GZMK
+  - GZMM
+  - CCL4
+  - TRGC2
+  - CRTAM
+  - LAG3
+  - IFNG
+  - PTMS
+  - MT1X
+  - MT2A
+  - MT1E
+  NK.CD56:
+  - GNLY
+  - NKG7
+  - TYROBP
+  - KLRD1
+  - KLRF1
+  - FCER1G
+  - KLRC1
+  - NCAM1
+  - XCL1
+  - XCL2
+  - KRT81
+  - KRT86
+  - CD7
+  - CD63
+  NK.Cytotoxic:
+  - GNLY
+  - NKG7
+  - TYROBP
+  - KLRD1
+  - KLRF1
+  - FCER1G
+  - FCGR3A
+  - FGFBP2
+  - SPON2
+  - CX3CR1
+  - PLAC8
+  - PLEK
+  - GZMH
+  - ADGRG1
+  - PTGDS
+  - IGFBP7
+  Cycling.T.NK:
+  - MKI67
+  - TOP2A
+  - CDC20
+  - CDK1
+  - PTTG1
+  MT.high.T.NK:
+  - XIST
+  - MTRNR2L12
+  - MALAT1
+  - IGKC
+  - MIAT
+  - MT-ND6
+B.super:
+  Cycling.B:
+  - HIST1H4C
+  - HMGB2
+  - MKI67
+  - TOP2A
+  - CDC20
+  - CDK1
+  - PTTG1
+  Cycling.Plasma:
+  - HSP90B1
+  - HIST1H2BJ
+  - ASPM
+  - MKI67
+  - TOP2A
+  - CDC20
+  - CDK1
+  - PTTG1
+  GC.B:
+  - LMO2
+  - LRMP
+  - PTTG1
+  - RGS13
+  - CCDC144A
+  - NEIL1
+  doublet.Dendritic.cell:
+  - BIRC3
+  - CCR7 # 31632965
+  - CCL19 # 31632965
+  - MARCKSL1
+  - IDO1
+  - CLEC9A
+  Mature.B:
+  - CD37
+  - CD22
+  - CD24
+  - CD48
+  - CD79A
+  - CD79B
+  Mature.B.TCL1A:
+  - TCL1A
+  - IGHD
+  - CD69
+  - CD37
+  - CD79B
+  - CD79A
+  - CD72
+  - CD22
+  - CD52
+  Immature.B:
+  - AIM2
+  - B2M
+  - CCDC50
+  - LINC01781
+  - TNFRSF13B
+  Plasma.IgG.IGKC:
+  - IGKC
+  - IGHG1
+  - IGHG2
+  - IGHG3
+  - IGHG4
+  - IGKV3-20
+  - IGKV1-39
+  - IGHV3-7
+  Plasma.IgG.IGKV1-5:
+  - IGKC
+  - IGHG1
+  - IGHG3
+  - IGKV1-5
+  - IGKV1D-8
+  - IGHV5-10-1
+  - IGHV3-23
+  Plasma.IgG.IGLL5:
+  - IGLL5
+  - IGLV6-57
+  - IGHGP
+  - IGHG1
+  - MZB1
+  - CD38
+  Plasma.IgA.IGLC3:
+  - IGLC3
+  - IGKC
+  - IGHA1
+  - IGHA2
+  - JCHAIN
+#  IgG.L:
+#  - IGLC2
+#  - IGLC3
+#  - IGHG1
+#  - IGHG2
+#  - IGHG3
+#  - IGHG4
+#  IgD.K:
+#  - IGKC
+#  - IGHD
+#  IgD.L:
+#  - IGLC2
+#  - IGLC3
+#  - IGHD
+#  IgA.L:
+#  - IGLC2
+#  - IGLC3
+#  - IGHA1
+#  - IGHA2
+#  IgM.K:
+#  - IGKC
+#  - IGHM
+#  IgM.L:
+#  - IGLC2
+#  - IGLC3
+#  - IGHM
+#  IgE.K:
+#  - IGKC
+#  - IGHE
+#  IgE.L:
+#  - IGLC2
+#  - IGLC3
+#  - IGHE
+Myeloid.super:
+  M1.CDKN1C:
+  - CDKN1C
+  - LST1
+  - SMIM25
+  - CD52
+  - TCF7L2
+  M1.S100A8:
+  - S100A8
+  - S100A9
+  - FCN1
+  - VCAN
+  - APOBEC3A
+  M1.S100A9:
+  - S100A9
+  - THBS1
+  - S100A8
+  - AREG
+  - EREG
+  M1.CXCL10:
+  - CXCL10	
+  - CXCL11
+  - CCL8
+  - IFIT1
+  - TNFSF10
+  M2.SELENOP:
+  - SELENOP # 29054422
+  - FCGBP
+  - CCL4L2
+  - A2M
+  - CCL3L1
+  M2.MARCO:
+  - MARCO	# 28769933
+  - CXCL3
+  - PLIN2
+  - FN1
+  - CCL20
+  - TGM2
+  M.stressed:
+  - HSPA6	
+  - HSPA1A
+  - DNAJB1
+  - HSPH1
+  - HSPB1
+  Mast.cell:
+  - KIT
+  - CPA3
+  - CTSG
+  - MS4A2
+  - TPSAB1
+  - TPSB2
+  - HPGD
+  - HPGDS
+  - GATA2
+  cDC1:
+  - CLEC9A
+  - XCR1
+  - BTLA
+  - BATF3
+  - IRF8
+  cDC2:
+  - FCER1A
+  - S100B
+  - CD1C # 29755453
+  - CLEC10A # 29755453
+  - HLA-DQA1
+  mDC:
+  - BIRC3
+  - CCR7 # 31632965
+  - CCL19 # 31632965
+  - MARCKSL1
+  - IDO1
+  pDC:
+  - GZMB
+  - PTGDS
+  - JCHAIN
+  - BCL11A
+  - CLIC3
+  Neutrophil:
+  - CXCR2
+  - FCGR3B
+  - IL1R2
+  - CSF3R
+  - NAMPT
+  - TXNIP
+  Cycling.M:
+  - MKI67
+  - TOP2A
+  - CDC20
+  - CDK1
+  - PTTG1
+Endothelial.cell:
+  Arterial.EC:
+  - EFNB2 # 18972135
+  - NOTCH4 # 18972135
+  - DLL4 # 18972135
+  - JAG2 # 18972135
+  - ESM1
+  - RGCC
+  - ANGPT2
+  Quiescent.EC:
+  - GJA4 # https://www.nature.com/articles/s41467-017-01742-7
+  - GJA5
+  - FBLN5
+  - SAT1
+  - SEMA3G
+  Venous.EC:
+  - ACKR1 # 18972135, 28526034
+  - EPHB4 # 18972135
+  - NR2F2 # 18972135
+  - ADIRF
+  - C7
+  - POSTN
+  - OLFM1
+  CD36.EC:
+  - CD36 # 23968980, 31850371
+  - FABP4 # 23968980, 31850371
+  - FABP5
+  Lymphatic.EC:
+  - CCL21 # 21593766
+  - DOCK5
+  - MRC1
+  - EFNA5
+  - IGF1
+  - RELN
+  - PDPN
+  - COLEC12
+  Microvascular.EC:
+  - ISG15
+  - CXCL9
+  - CXCL10
+  - CXCL11
+  - IFIT1
+  - MX1
+  Migrating.EC:
+  - EGFL6 # 21531721
+  - NDUFA4L2
+  - PDGFRB
+  - NOTCH3
+  Cycling.EC:
+  - MKI67
+  - TOP2A
+  - CDC20
+  - CDK1
+  - PTTG1
+Stromal.super:
+  Arterial.EC:
+  - EFNB2 # 18972135
+  - NOTCH4 # 18972135
+  - DLL4 # 18972135
+  - JAG2 # 18972135
+  Venous.EC:
+  - ACKR1 # 18972135, 28526034
+  - EPHB4 # 18972135
+  - NR2F2 # 18972135
+  - ADIRF
+  - C7
+  - POSTN
+  - OLFM1
+  Capillary.EC:
+  - CD36 # 23968980, 31850371
+  - FABP4 # 23968980, 31850371
+  - FABP5
+  Lymphatic.EC:
+  - CCL21 # 21593766
+  - DOCK5
+  - MRC1
+  - EFNA5
+  - IGF1
+  - RELN
+  - PDPN
+  - COLEC12
+  Pericyte:
+  - COL4A1
+  - COL4A2
+  - RGS5
+  - NDUFA4L2
+  - MCAM
+  - IGFBP7
+  - PP1R14A
+  - CCDC102B
+  - A2M
+  - HIGD1B
+  - MHY11
+  - ACTA2
+  - ADIRF
+  - CAV1
+  - CRIP1
+  CAF_1:
+  - MMP11 
+  - COL11A1
+  - COL12A1
+  - COL5A1
+  - COL5A2
+  - COL6A3
+  - FN1 # 29021221
+  CAF_2:
+  - MMP7
+  - MGP # 17273163
+  - C7
+  - CFD
+  - ADH1B
+  - GSN
+  CAF_3:
+  - MMP1
+  - MMP13
+  - TDO2
+  - DIO2
+  - CXCL13
+  - CTSK
+  - ACKR4 
+  Cycling.FB:
+  - MKI67
+  - TOP2A
+  - CDC20
+  - CDK1
+  - PTTG1
+  Cardiac.FB.like:
+  - STAR # 23831818
+  - PEG3 # 28774379
+  IL1.CAF:
+  - HAS1
+  - CXCL1
+  - PRG4
+  - AQP1
+  - C3
+  - CALB2
+  - CCDC80
+  - CLDN1
+  - HP
+  - EZR
+  - SLPI
+  - UPK3B
+  - KRT8
+  - KRT18
+  - KRT19
+  Angiogenic.CAF:
+  - VEGFA
+  - CA12
+  - CA7
+  - ANGPTL4
+  - EGLN3
+  - ENO1
+  - ENO2
+  - BNIP3
+  - HILPDA
+  - LDHA
+Fibroblast:
+  Pericyte:
+  - COL4A1
+  - COL4A2
+  - RGS5
+  - NDUFA4L2
+  - MCAM
+  - IGFBP7
+  - PP1R14A
+  - CCDC102B
+  - A2M
+  - HIGD1B
+  - MHY11
+  - ACTA2
+  - ADIRF
+  - CAV1
+  - CRIP1
+  - MEF2C
+  Activated.TGFb.CAF:
+  - MMP11 
+  - MMP13
+  - COL11A1
+  - COL12A1
+  - COL6A1
+  - COL5A1
+  - COL5A2
+  - COL6A3
+  - ACTA2
+  - FAP
+  - FN1 # 29021221
+  Activated.IGF1.CAF:
+  - APOE
+  - IGF1 # 17273163
+  - CYR61
+  - ATF3
+  - FBLN1
+  Early.CAF:
+  - CFD 
+  - C7
+  - APOD
+  - GSN
+  - MGP
+  - PEG3
+  - ACKR4 
+  Cycling.CAF:
+  - MKI67
+  - TOP2A
+  - CDC20
+  - CDK1
+  - PTTG1
+  Mesothelial.IL1.CAF:
+  - HAS1
+  - CXCL1 
+  - HP
+  - SLPI
+  - PRG4
+  - AQP1
+  - C3
+  - CALB2
+  - CCDC80
+  - CLDN1
+  - EZR
+  - UPK3B
+  - KRT8
+  - KRT18
+  - KRT19
+  Angiogenic.VEGF.CAF:
+  - VEGFA
+  - CA12
+  - CA7
+  - ANGPTL4
+  - EGLN3
+  - ENO1
+  - ENO2
+  - BNIP3
+  - HILPDA
+  - LDHA
+Ovarian.cancer.cell:
+  Secretory.cell.1:
+  - SLPI
+  - SST
+  - PLCG2
+  - SCGB2A1
+  - KRT7
+  Secretory.cell.2:
+  - OVGP1
+  - SCGB1A1
+  - SCGB3A1
+  - CRISP3
+  - AGR2
+  - TFF3
+  Secretory.cell.3:
+  - GAS6
+  - MTSS1
+  - TFF3
+  - SAMHD1
+  - FBXO32
+  Secretory.cell.4:
+  - AKAP12
+  - MMP7
+  - DCDC2
+  - TSPAN1
+  - TSPAN18
+  Secretory.cell.5:
+  - CLDN16
+  - CLDN1
+  - EREG
+  - NDUFB5
+  Ciliated.cell.1:
+  - C20orf85
+  - CAPS
+  - TPPP3
+  - PIFO
+  - CAPSL
+  Ciliated.cell.2:
+  - MMP7
+  - KRT14
+  - KRT5
+  - KRT16
+  - SLURP1
+  Endometrial.cell:
+  - PAEP
+  - HP
+  - PTGDS
+  - OBP2A
+  - SERINC2
+  Cycling.cancer.cell.1:
+  - CENPF
+  - HMGB2
+  - PTTG1
+  - MKI67
+  - TOP2A
+  Cycling.cancer.cell.2:
+  - TMEM106C
+  - ATP5MC1
+  - PHB
+  - SNF8
+  - SNRPD1
+  doublet.Other:
+  - IGFBP7
+  - SPARCL1
+  - ITM2B
+  - CRISP3
+  - AGR2
+  - TFF3
+CD8.T:
+  CD8.T.naive:
+  - TCF7
+  - KLRG1
+  - GIMAP7
+  - LYAR
+  - EMP3
+  CD8.T.activated.FOS:
+  - FOS
+  - FOSB
+  - JUNB
+  - DUSP1
+  - GZMK
+  CD8.T.activated.CD40LG:
+  - CD40LG
+  - TNFRSF25
+  - MAF
+  CD8.T.activated.HSP:
+  - HSPA1A
+  - HSPA1B
+  - DNAJB1
+  CD8.T.dysfunctional.CXCL13:
+  - CXCL13
+  - GZMB
+  - CCL3
+  - CTLA4
+  - IFNG
+  CD8.T.dysfunctional.ISG:
+  - IFIT1
+  - IFIT2
+  - IFIT3
+  - ISG15
+  - ISG20
+  gd.T.cell:
+  - TRDC
+  - TRGC1
+  - TRGC2
+  doublet.Plasma.cell:
+  - IGKC
+  - IGLC3
+  - IGHG1
+  - IGLC2
+  - IGHG3
+  

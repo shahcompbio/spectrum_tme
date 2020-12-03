@@ -1,0 +1,79 @@
+---
+title: "MSK SPECTRUM TCGA consensus signatures for HGSOC per patient"
+author: "Florian Uhlitz"
+date: "Dec 1, 2020"
+output: 
+  html_document: 
+    df_print: kable
+    number_sections: yes
+    toc: yes
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = F)
+
+```
+
+```{r chunk_010}
+
+library(magrittr)
+library(tidyverse)
+library(Seurat)
+library(readxl)
+library(cowplot)
+library(colorblindr)
+library(viridis)
+library(consensusOV)
+theme_cowplot2 <- function(...) {
+  theme_cowplot(font_size = 12, ...) %+replace%
+    theme(strip.background = element_blank(),
+          axis.line = element_blank(), 
+          panel.border = element_rect(linetype = 1, size = 1, color = "black"),
+          plot.background = element_blank())
+}
+
+clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_explore/_data/small/signatures/hgsc_v5_colors.yaml") %>% 
+  lapply(function(x) purrr::map_depth(x, purrr::vec_depth(x)-2, unlist))
+
+```
+
+```{r chunk_020}
+
+patient_dirs <- c(
+  '/work/shah/isabl_data_lake/analyses/46/17/4617/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/46/17/4617/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/46/18/4618/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/46/20/4620/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/46/15/4615/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/45/84/4584/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/46/16/4616/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/45/98/4598/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/67/84/6784/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/68/06/6806/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/68/10/6810/cells.tsv',
+  '/work/shah/isabl_data_lake/analyses/68/09/6809/cells.tsv'
+)
+
+cell_tbl <- lapply(patient_dirs, read_tsv) %>% 
+  bind_rows
+
+```
+
+```{r chunk_030}
+
+cell_tbl %>% 
+  mutate(patient_id = str_sub(sample, 0, 15)) %>% 
+  # sample_n(10000) %>% 
+  ggplot(aes(UMAP_1, UMAP_2, color = cell_type)) + 
+  geom_point(size = 0.01) + 
+  facet_wrap(~patient_id) +
+  scale_color_manual(values = clrs$cell_type) + 
+  theme_void()
+
+```
+
