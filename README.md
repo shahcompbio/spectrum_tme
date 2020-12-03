@@ -6,7 +6,7 @@ Scripts are separated into preprocessing scripts and plotting scripts.
 
 **STATUS**
 
-- [_] OPEN
+- [ ] OPEN
 - [x] DONE
 
 ## Data dependencies
@@ -17,10 +17,10 @@ Scripts are separated into preprocessing scripts and plotting scripts.
 
 The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analysis. 
 
-- [_] Cohort expression object: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/`
-- [_] Cohort embedding table: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/cells.tsv`
-- [_] Cell type objects: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/{}.rds`
-- [_] Cell type object cluster markers: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/{}_markers.tsv`
+- [ ] Cohort expression object: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/`
+- [ ] Cohort embedding table: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/cells.tsv`
+- [ ] Cell type objects: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/{}.rds`
+- [ ] Cell type object cluster markers: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/{}_markers.tsv`
 
 **Meta data** 
 
@@ -36,43 +36,43 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 **Cohort** 
 
-- [_] compute patient specificity from SNN graph
-    - [_] [`_preprocessing/010_SPECTRUM_freeze_v6_patient_mixing_multicore.R`](_preprocessing/010_SPECTRUM_freeze_v6_patient_mixing_multicore.R)
-- [_] run consensusOV for TCGA subtype analysis 
+- [ ] compute patient specificity from SNN graph
+    - [ ] [`_preprocessing/010_SPECTRUM_freeze_v6_patient_mixing_multicore.R`](_preprocessing/010_SPECTRUM_freeze_v6_patient_mixing_multicore.R)
+- [ ] run consensusOV for TCGA subtype analysis 
     - [x] helper script to start runs: [`_preprocessing/020_SPECTRUM_freeze_v6_TCGA_signatures.R`](_preprocessing/020_SPECTRUM_freeze_v6_TCGA_signatures.R)
     - [x] parameterized markdown to compute consensusOV for a given `patient.rds` input file [`_preprocessing/021_SPECTRUM_freeze_v6_TCGA_signatures_per_patient.Rmd`](_preprocessing/021_SPECTRUM_freeze_v6_TCGA_signatures_per_patient.Rmd)
-    - [_] summarized report of TCGA analysis [`_preprocessing/022_SPECTRUM_freeze_v6_TCGA_summary.Rmd`](_preprocessing/022_SPECTRUM_freeze_v6_TCGA_summary.Rmd)
+    - [ ] summarized report of TCGA analysis [`_preprocessing/022_SPECTRUM_freeze_v6_TCGA_summary.Rmd`](_preprocessing/022_SPECTRUM_freeze_v6_TCGA_summary.Rmd)
 
-- [_] output files and objects:
-    - [_] consensusOV: `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/consensusOV/SPECTRUM_freeze_v6_consensusOV.tsv`
+- [ ] output files and objects:
+    - [ ] consensusOV: `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/consensusOV/SPECTRUM_freeze_v6_consensusOV.tsv`
 
 **Cell type subsets**
 
-- [_] common tasks
-    - [_] annotate sub type clusters and filter out doublet clusters
-    - [_] run progeny for pathway scoring
-    - [_] score gene signature modules
+- [ ] common tasks
+    - [ ] annotate sub type clusters and filter out doublet clusters
+    - [ ] run progeny for pathway scoring
+    - [ ] score gene signature modules
 
-- [_] individual scripts for common tasks:
-    - [_] B.super [`_preprocessing/031_SPECTRUM_freeze_v6_prepro_B.super.Rmd`](_preprocessing/031_SPECTRUM_freeze_v6_prepro_B.super.Rmd)
-    - [_] Fibroblast.super [`_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd`](_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd)
-    - [_] T.super [`_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd`](_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd)
-    - [_] Myeloid.super [`_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd`](_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd)
-    - [_] Ovarian.cancer.cell.super [`_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd`](_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd)
+- [ ] individual scripts for common tasks:
+    - [ ] B.super [`_preprocessing/031_SPECTRUM_freeze_v6_prepro_B.super.Rmd`](_preprocessing/031_SPECTRUM_freeze_v6_prepro_B.super.Rmd)
+    - [ ] Fibroblast.super [`_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd`](_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd)
+    - [ ] T.super [`_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd`](_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd)
+    - [ ] Myeloid.super [`_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd`](_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd)
+    - [ ] Ovarian.cancer.cell.super [`_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd`](_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd)
     
-- [_] cell type specific tasks
-    - [_] Cancer cells: filter out low quality cells <1% mito reads
-    - [_] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
-    - [_] Myeloid cells: run diffusion map on macrophage subset
+- [ ] cell type specific tasks
+    - [ ] Cancer cells: filter out low quality cells <1% mito reads
+    - [ ] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
+    - [ ] Myeloid cells: run diffusion map on macrophage subset
 
-- [_] output files and objects:
-    - [_] `B.super.annotated.rds`
-    - [_] `Fibroblast.super.annotated.rds`
-    - [_] `T.super.annotated.rds`
-    - [_] `Myeloid.super.annotated.rds`
-    - [_] `Ovarian.cancer.cell.super.annotated.rds`
-    - [_] `CD8.T.cell.annotated.rds`
-    - [_] `Macrophage.annotated.rds`
+- [ ] output files and objects:
+    - [ ] `B.super.annotated.rds`
+    - [ ] `Fibroblast.super.annotated.rds`
+    - [ ] `T.super.annotated.rds`
+    - [ ] `Myeloid.super.annotated.rds`
+    - [ ] `Ovarian.cancer.cell.super.annotated.rds`
+    - [ ] `CD8.T.cell.annotated.rds`
+    - [ ] `Macrophage.annotated.rds`
 
 
 ## Plotting scripts
@@ -81,48 +81,48 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 [`110_cohort_plotting.Rmd`](110_cohort_plotting.Rmd)
 
-- [_] UMAP embeddings
-- [_] Patient specificity
-- [_] TCGA subtypes
-- [_] Composition barplots
+- [ ] UMAP embeddings
+- [ ] Patient specificity
+- [ ] TCGA subtypes
+- [ ] Composition barplots
 
 **Cancer cell**
 
 [`120_cancer_cell_plotting.Rmd`](120_cancer_cell_plotting.Rmd)
 
-- [_] UMAP embeddings
-- [_] Composition barplots
-- [_] Marker heatmap
+- [ ] UMAP embeddings
+- [ ] Composition barplots
+- [ ] Marker heatmap
 
 **T cell**
 
 [`130_T_cell_plotting.Rmd`](130_T_cell_plotting.Rmd)
 
-- [_] UMAP embeddings
-- [_] Composition barplots
-- [_] Marker heatmap
+- [ ] UMAP embeddings
+- [ ] Composition barplots
+- [ ] Marker heatmap
 
 **Myeloid cell**
 
 [`140_Myeloid_cell_plotting.Rmd`](140_Myeloid_cell_plotting.Rmd)
 
-- [_] UMAP embeddings
-- [_] Composition barplots
-- [_] Marker heatmap
+- [ ] UMAP embeddings
+- [ ] Composition barplots
+- [ ] Marker heatmap
 
 **CD8 T cell**
 
 [`150_CD8_T_cell_plotting.Rmd`](150_CD8_T_cell_plotting.Rmd)
 
-- [_] Diffusion maps
-- [_] Module trajectories
+- [ ] Diffusion maps
+- [ ] Module trajectories
 
 **Macrophages**
 
 [`160_macrophage_plotting.Rmd`](160_macrophage_plotting.Rmd)
 
-- [_] Diffusion maps
-- [_] Module trajectories
+- [ ] Diffusion maps
+- [ ] Module trajectories
 
 
 
