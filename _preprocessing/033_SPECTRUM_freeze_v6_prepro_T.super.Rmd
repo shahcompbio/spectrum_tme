@@ -16,7 +16,6 @@ params:
   cell_type_major: ["T.cell"]
   cell_sort: "CD45+"
   louvain_resolution: 0.2
-  
 ---
 
 ```{r setup, include=FALSE}
@@ -35,7 +34,6 @@ library(readxl)
 library(cowplot)
 library(colorblindr)
 library(viridis)
-library(destiny)
 
 theme_cowplot2 <- function(...) {
   theme_cowplot(font_size = 12, ...) %+replace%
@@ -59,22 +57,19 @@ louvain_resolution <- params$louvain_resolution
 ### load all data ---------------------------------
 
 helper_f <- function(x) ifelse(is.na(x), "", x)
-markers_v5 <- yaml::read_yaml("/home/uhlitzf/spectrum_explore/_data/small/signatures/hgsc_v5_major.yaml")
+markers_v6 <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_major.yaml")
 
 helper_f2 <- function(x) select(unnest(enframe(x, "subtype", "gene"), cols = gene), gene, subtype)
-markers_v5_super <- lapply(yaml::read_yaml("/home/uhlitzf/spectrum_explore/_data/small/signatures/hgsc_v5_super.yaml"), helper_f2)
+markers_v6_super <- lapply(yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_super.yaml"), helper_f2)
 
-clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_explore/_data/small/signatures/hgsc_v5_colors.yaml") %>% 
+clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_colors.yaml") %>% 
   lapply(function(x) map_depth(x, vec_depth(x)-2, unlist))
-
-```
-
-```{r chunk_025}
 
 names(clrs$patient_id) <- str_remove_all(names(clrs$patient_id), "SPECTRUM-OV-")
 
-meta_tbl <- read_excel("_data/small/MSK SPECTRUM - Single cell RNA-seq.xlsx", sheet = 3) %>% 
-  mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-"))
+meta_tbl <- read_excel("_data/small/MSK SPECTRUM - Single cell RNA-seq_v6.xlsx", sheet = 2) %>% 
+  mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-")) %>% 
+  filter(therapy == "pre-Rx")
 
 signature_tbl <- read_tsv("_data/small/mutational_signatures_summary.tsv") %>% 
   mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-")) %>% 
@@ -102,13 +97,13 @@ patient_id <- sort(unique(plot_data$patient_id))
 
 ```
 
-`r markers_v5[[coi]]`
+`r markers_v6[[coi]]`
 
 ## Subtype currated markers
 
 ```{r chunk_030}
 
-markers_v5_super[[coi]] %>% 
+markers_v6_super[[coi]] %>% 
   group_by(subtype) %>% 
   mutate(rank = row_number(gene)) %>% 
   spread(subtype, gene) %>% 
@@ -137,7 +132,7 @@ test_set <- marker_tbl %>%
   group_by(cluster, join_helper, k) %>%
   nest(test_set = gene)
 
-markers_doub_tbl <- markers_v5 %>% 
+markers_doub_tbl <- markers_v6 %>% 
   enframe("subtype", "gene") %>% 
   filter(!(subtype %in% unique(c(coi, cell_type_major)))) %>% 
   unnest(gene) %>% 
@@ -146,7 +141,7 @@ markers_doub_tbl <- markers_v5 %>%
   mutate(subtype = paste0("doublet.", subtype)) %>% 
   bind_rows(tibble(subtype = "Mito.high", gene = grep("^MT-", rownames(seu_obj), value = T)))
 
-ref_set <- markers_v5_super[[coi]] %>% 
+ref_set <- markers_v6_super[[coi]] %>% 
   bind_rows(markers_doub_tbl) %>% 
   group_by(subtype) %>% 
   mutate(m = length(gene),
@@ -172,7 +167,7 @@ hyper_tbl <- test_set %>%
 #   facet_wrap(~cluster) +
 #   coord_flip()
   
-low_rank <- str_detect(unique(hyper_tbl$subtype), "Mito|doublet")
+low_rank <- str_detect(unique(hyper_tbl$subtype), "doublet")
 subtype_lvl <- c(sort(unique(hyper_tbl$subtype)[!low_rank]), sort(unique(hyper_tbl$subtype)[low_rank]))
   
 cluster_label_tbl <- hyper_tbl %>% 
@@ -199,7 +194,7 @@ marker_sheet <- marker_tbl %>%
   mutate_all(.funs = helper_f)
 
 formattable::formattable(marker_sheet)
-write_tsv(marker_sheet, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/", coi, "_marker_sheet.tsv"))
+write_tsv(marker_sheet, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_marker_sheet.tsv"))
 
 ```
 
@@ -257,13 +252,11 @@ my_subtypes <- names(clrs$cluster_label[[coi]])
 my_subtypes <- c(my_subtypes, unlist(lapply(paste0("_", 1:3), function(x) paste0(my_subtypes, x)))) %>% .[!str_detect(., "doublet")]
 
 cells_to_keep <- colnames(seu_obj)[seu_obj$cluster_label %in% my_subtypes]
-# seu_obj_sub <- subset(seu_obj, cells = cells_to_keep)
-# seu_obj_sub <- RunUMAP(seu_obj_sub, dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
-# seu_obj_sub$cluster_label <- seu_obj$cluster_label[colnames(seu_obj) %in% colnames(seu_obj_sub)]
-# write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/", coi, "_processed_filtered.rds"))
-seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/", coi, "_processed_filtered.rds"))
+seu_obj_sub <- subset(seu_obj, cells = cells_to_keep)
+seu_obj_sub <- RunUMAP(seu_obj_sub, dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
 seu_obj_sub$cluster_label <- seu_obj$cluster_label[colnames(seu_obj) %in% colnames(seu_obj_sub)]
-write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/", coi, "_processed_filtered.rds"))
+write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
+seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
 
 plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label"))) %>% 
   left_join(select(meta_tbl, sample = isabl_id, patient_id, tumor_supersite, tumor_subsite, sort_parameters, therapy), 
@@ -304,225 +297,9 @@ ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = tumor_supersite)
   # facet_wrap(~therapy) +
   scale_color_manual(values = clrs$tumor_supersite)
 
-write_tsv(select(plot_data_sub, cell_id, everything(), -UMAP_1, -UMAP_2, -contains("RNA_")), paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/", coi, "_embedding.tsv"))
+write_tsv(select(plot_data_sub, cell_id, everything(), -UMAP_1, -UMAP_2, -contains("RNA_")), paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_embedding.tsv"))
 
 ```
-
-## sub cluster CD8 cells
-
-```{r chunk_61, fig.width=12, fig.height=4}
-
-# seu_obj_cd8 <- seu_obj_sub %>% 
-#   subset(subset = cluster_label == "CD8.T") %>% 
-#   FindNeighbors(reduction = "harmony", dims = 1:50) %>% 
-#   FindClusters(seu_obj_cd8, resolution = 0.2) %>% 
-#   RunUMAP(dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
-# 
-# write_rds(seu_obj_cd8, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_processed.rds")
-seu_obj_cd8 <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_processed.rds")
-
-# marker_tbl <- FindAllMarkers(seu_obj_cd8, only.pos = T)
-# write_tsv(as_tibble(marker_tbl), "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_markers.tsv")
-marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_markers.tsv")
-
-# as_tibble(marker_tbl) %>% select(cluster, gene) %>% group_by(cluster) %>% 
-#   mutate(rank = row_number(cluster)) %>% 
-#   spread(cluster, gene) %>% 
-#   View
-
-## Hypergeometric test --------------------------------------
-
-test_set <- marker_tbl %>% 
-  group_by(cluster) %>% 
-  filter(!str_detect(gene, "^RPS|^RPL")) %>% 
-  slice(1:50) %>% 
-  mutate(k = length(cluster)) %>% 
-  ungroup %>%
-  select(cluster, gene, k) %>% 
-  mutate(join_helper = 1) %>% 
-  group_by(cluster, join_helper, k) %>%
-  nest(test_set = gene)
-
-markers_doub_tbl <- markers_v5 %>% 
-  enframe("subtype", "gene") %>% 
-  filter(!(subtype %in% unique(c(coi, cell_type_major)))) %>% 
-  unnest(gene) %>% 
-  group_by(gene) %>% 
-  filter(length(gene) == 1) %>% 
-  mutate(subtype = paste0("doublet.", subtype)) %>% 
-  bind_rows(tibble(subtype = "Mito.high", gene = grep("^MT-", rownames(seu_obj), value = T)))
-
-ref_set <- markers_v5_super[["CD8.T"]] %>% 
-  bind_rows(markers_doub_tbl) %>% 
-  group_by(subtype) %>% 
-  mutate(m = length(gene),
-         n = length(rownames(seu_obj))-m,
-         join_helper = 1) %>% 
-  group_by(subtype, m, n, join_helper) %>%
-  nest(ref_set = gene)
-
-hyper_tbl <- test_set %>% 
-  left_join(ref_set, by = "join_helper") %>% 
-  group_by(cluster, subtype, m, n, k) %>%
-  do(q = length(intersect(unlist(.$ref_set), unlist(.$test_set)))) %>%
-  mutate(pval = 1-phyper(q = q, m = m, n = n, k = k)) %>%
-  ungroup %>%
-  mutate(qval = p.adjust(pval, "BH"),
-         sig = qval < 0.01)
-
-# hyper_tbl %>% 
-#   group_by(subtype) %>% 
-#   filter(any(qval < 0.01)) %>%
-#   ggplot(aes(subtype, -log10(qval), fill = sig)) +
-#   geom_bar(stat = "identity") +
-#   facet_wrap(~cluster) +
-#   coord_flip()
-  
-low_rank <- str_detect(unique(hyper_tbl$subtype), "Mito|doublet")
-subtype_lvl <- c(sort(unique(hyper_tbl$subtype)[!low_rank]), sort(unique(hyper_tbl$subtype)[low_rank]))
-  
-cluster_label_tbl <- hyper_tbl %>% 
-  mutate(subtype = ordered(subtype, levels = subtype_lvl)) %>% 
-  arrange(qval, subtype) %>%
-  group_by(cluster) %>% 
-  slice(1) %>% 
-  mutate(subtype = ifelse(sig, as.character(subtype), paste0("unknown_", cluster))) %>% 
-  select(cluster, cluster_label = subtype) %>% 
-  ungroup %>% 
-  mutate(cluster_label = make.unique(cluster_label, sep = "_"))
-
-marker_sheet <- marker_tbl %>% 
-  left_join(cluster_label_tbl, by = "cluster") %>% 
-  group_by(cluster_label) %>% 
-  filter(!str_detect(gene, "^RPS|^RPL")) %>% 
-  slice(1:50) %>% 
-  mutate(rank = row_number()) %>% 
-  select(cluster_label, gene, rank) %>% 
-  spread(cluster_label, gene) %>% 
-  mutate_all(.funs = helper_f)
-
-formattable::formattable(marker_sheet)
-write_tsv(marker_sheet, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T.cell_marker_sheet.tsv"))
-
-
-```
-
-```{r chunk_62, fig.width=12, fig.height=4}
-
-# seu_obj_cd8$cluster_label <- unname(deframe(cluster_label_tbl)[as.character(unlist(seu_obj_cd8[[paste0("RNA_snn_res.", louvain_resolution)]]))])
-# 
-# seu_obj_sub_sub <- seu_obj_sub
-# 
-# cluster_label_tbl_1 <- as_tibble(cbind(cell_id=colnames(seu_obj_sub), FetchData(seu_obj_sub, c("cluster_label"))))
-# cluster_label_tbl_2 <- as_tibble(cbind(cell_id=colnames(seu_obj_cd8), FetchData(seu_obj_cd8, c("cluster_label"))))
-# 
-# cluster_label_tbl <- left_join(cluster_label_tbl_1, cluster_label_tbl_2, by = "cell_id") %>%
-#   mutate(cluster_label = ifelse(is.na(cluster_label.y), cluster_label.x, cluster_label.y))
-# 
-# seu_obj_sub_sub$cluster_label <- cluster_label_tbl$cluster_label
-# 
-# seu_obj_sub_sub <- subset(seu_obj_sub_sub, subset = cluster_label != "doublet.Plasma.cell")
-# write_rds(seu_obj_sub_sub, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/T.cell_processed_filtered_sub.rds")
-
-```
-
-```{r chunk_63, fig.width=12, fig.height=4}
-
-# root_cell <- "SPECTRUM-OV-036_S1_CD45P_PELVIC_PERITONEUM_CGGACACCAACGACTT"
-# seu_obj_cd8_sub <- subset(seu_obj_cd8, subset = cluster_label != "doublet.Plasma.cell" & cluster_label != "gd.T.cell")
-# seu_obj_cd8_sub <- subset(seu_obj_cd8_sub, cells = c(root_cell, colnames(seu_obj_cd8_sub)[colnames(seu_obj_cd8_sub)!=root_cell][-1]))
-# write_rds(seu_obj_sub_sub, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/T.cell_processed_filtered_sub.rds")
-# seu_obj_sub_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/T.cell_processed_filtered_sub.rds")
-
-signature_modules <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", 
-           sheet = 2, skip = 1, range = "M2:P100") %>% 
-  gather(module, gene) %>% 
-  na.omit() %>% 
-  group_by(module) %>% 
-  do(gene = c(.$gene)) %>% 
-  {setNames(.$gene, .$module)}
-
-# for (i in 1:length(signature_modules)) {
-#   seu_obj_cd8_sub <- AddModuleScore(seu_obj_cd8_sub, features = signature_modules[i], name = names(signature_modules)[i])
-#   seu_obj_cd8_sub[[names(signature_modules)[i]]] <- seu_obj_cd8_sub[[paste0(names(signature_modules)[i], "1")]]
-#   seu_obj_cd8_sub[[paste0(names(signature_modules)[i], "1")]] <- NULL
-#   print(paste(names(signature_modules)[i], "DONE"))
-# }
-
-# dc_obj <- DiffusionMap(seu_obj_cd8_sub@reductions$harmony@cell.embeddings, k = 100)
-# dc_mat <- dc_obj@eigenvectors
-# colnames(dc_mat) <- paste0("DC_", 1:ncol(dc_mat))
-# seu_obj_cd8_sub[["DC"]] <- CreateDimReducObject(embeddings = dc_mat, key = "DC_", assay = DefaultAssay(seu_obj_cd8_sub))
-# 
-# write_rds(seu_obj_cd8_sub, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_processed_filtered.rds")
-# 
-# dpt_obj <- DPT(dc_obj)
-# write_rds(dpt_obj, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_sub_dpt.rds")
-# seu_obj_cd8_sub$DPT1 <- dpt_obj$DPT1
-# 
-# write_rds(seu_obj_cd8_sub, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_processed_filtered.rds")
-seu_obj_cd8_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_processed_filtered.rds")
-
-```
-
-```{r chunk_69, fig.width=12, fig.height=4}
-
-# set.seed(1)
-# seu_foo <- subset(seu_obj_cd8_sub, cells = c(root_cell, sample(colnames(seu_obj_cd8_sub), 1000)))
-# 
-# dc_obj_foo <- DiffusionMap(seu_foo@reductions$harmony@cell.embeddings, k = 100)
-# dc_mat_foo <- dc_obj_foo@eigenvectors
-# colnames(dc_mat_foo) <- paste0("DC_", 1:ncol(dc_mat_foo))
-# seu_foo[["DC"]] <- CreateDimReducObject(embeddings = dc_mat_foo, key = "DC_", assay = DefaultAssay(seu_foo))
-# 
-# dpt_obj_foo <- DPT(dc_obj_foo)
-# seu_foo$DPT1 <- dpt_obj_foo$DPT1
-# 
-# head(dpt_obj_foo$DPT1)
-# 
-# foo_tbl <- as_tibble(cbind(cell_id=colnames(seu_obj_cd8_sub),FetchData(seu_obj_cd8_sub, c("DC_1", "DC_2", "cluster_label", "DPT1"))))
-# p1 <- ggplot(foo_tbl, aes(DC_1, DC_2, color = DPT1)) + 
-#   geom_point(size = 0.01, alpha = 0.1) +
-#   geom_point(color = "red", data = filter(foo_tbl, cell_id == root_cell)) + 
-#   theme_void() +
-#   scale_color_gradientn(colors = magma(9))
-# p2 <- ggplot(foo_tbl, aes(DC_1, DC_2, color = cluster_label)) + 
-#   geom_point(size = 0.01, alpha = 0.1) + 
-#   theme_void()
-# plot_grid(p1, p2)
-# 
-# write_rds(dpt_obj, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/CD8.T_sub_dpt.rds")
-# seu_obj_cd8_sub$DPT1 <- dpt_obj$DPT1
-
-```
-
-## split by therapy
-
-```{r chunk_70, fig.width=12, fig.height=4}
-
-ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label)) + 
-  common_layers_disc +
-  ggtitle("Sub cluster") +
-  facet_wrap(~therapy) +
-  scale_color_manual(values = clrs$cluster_label[[coi]])
-
-ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = patient_id)) + 
-  common_layers_disc +
-  ggtitle("Patient") +
-  facet_wrap(~therapy) +
-  scale_color_manual(values = clrs$patient_id)
-
-ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = tumor_supersite)) + 
-  # geom_point(aes(umapharmony_1, umapharmony_2), 
-  #            color = "grey90", size = 0.01, 
-  #            data = select(plot_data_sub, -tumor_supersite)) +
-  common_layers_disc +
-  ggtitle("Site") +
-  facet_wrap(~therapy) +
-  scale_color_manual(values = clrs$tumor_supersite)
-
-```
-
 
 ## marker heatmap 
 
@@ -560,7 +337,7 @@ ggplot(plot_data_markers) +
         axis.ticks = element_blank(),
         axis.title = element_blank())
 
-ggsave(paste0("_fig/002_marker_heatmap_", coi, ".pdf"), width = nrow(marker_top_tbl)/6, height = 5)
+# ggsave(paste0("_fig/002_marker_heatmap_", coi, ".pdf"), width = nrow(marker_top_tbl)/6, height = 5)
  
 ```
 
@@ -596,7 +373,7 @@ pnabs_site <- ggplot(comp_site_tbl) +
 
 plot_grid(pnabs_site, pnrel_site, ncol = 2, align = "h")
 
-ggsave(paste0("_fig/02_deep_dive_", coi, "_comp_site.pdf"), width = 8, height = 4)
+# ggsave(paste0("_fig/02_deep_dive_", coi, "_comp_site.pdf"), width = 8, height = 4)
 
 ```
 
@@ -618,8 +395,7 @@ comp_tbl_sample_sort <- plot_data_sub %>%
   arrange(desc(therapy), tumor_supersite) %>% 
   mutate(tumor_subsite_rx = paste0(tumor_subsite, "_", therapy)) %>% 
   mutate(tumor_subsite = ordered(tumor_subsite, levels = unique(tumor_subsite)),
-         tumor_subsite_rx = ordered(tumor_subsite_rx, levels = unique(tumor_subsite_rx)),
-         patient_id = ordered(patient_id, levels = signature_tbl$patient_id)) %>% 
+         tumor_subsite_rx = ordered(tumor_subsite_rx, levels = unique(tumor_subsite_rx))) %>% 
   arrange(patient_id) %>% 
   mutate(label_patient_id = ifelse(as.logical(as.numeric(fct_inorder(as.character(patient_id)))%%2), "Patient1", "Patient2"))
 
@@ -634,7 +410,7 @@ comp_tbl_sample_sort %>%
   unite(sample_id_x, patient_id, sort_short_x, tumor_subsite_rx) %>% 
   select(sample_id_x, cluster_label, n, nrel, nsum) %>% 
   left_join(sample_id_x_tbl, by = "sample_id_x") %>% 
-  write_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/", coi, "_subtype_compositions.tsv"))
+  write_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_subtype_compositions.tsv"))
 
 ```
 
@@ -780,7 +556,7 @@ pcomp_hist_grid <- ggdraw() +
   draw_plot(phist1, x = 0.87, y = 0.05, width = 0.12, height = 0.8)
 
 pcomp_hist_grid
-ggsave(paste0("_fig/_paper/02_composition_v5_",coi,".pdf"), pcomp_hist_grid, width = 10, height = 2)
+# ggsave(paste0("_fig/02_composition_v6_",coi,".pdf"), pcomp_hist_grid, width = 10, height = 2)
 
 ```
 
@@ -820,20 +596,6 @@ ggplot(comp_tbl_z) +
 
 ```
 
-### per mutational signature
-
-Subset of pre-Rx adnexa samples
-
-```{r chunk_150, fig.width=8, fig.height=5}
-
-ggplot(filter(comp_tbl_sample_sort, therapy == "pre-Rx", tumor_supersite == "Adnexa")) +
-  geom_boxplot(aes(consensus_signature, nrel, fill = consensus_signature)) +
-  geom_point(aes(consensus_signature, nrel)) +
-  facet_wrap(~cluster_label) +
-  scale_fill_manual(values = clrs$consensus_signature) +
-  labs(y = "Fraction of cells [%]")
-
-```
 
 # session info
 
@@ -842,5 +604,4 @@ ggplot(filter(comp_tbl_sample_sort, therapy == "pre-Rx", tumor_supersite == "Adn
 devtools::session_info()
 
 ```
-
 

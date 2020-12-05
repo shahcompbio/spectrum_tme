@@ -28,9 +28,9 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 - [x] scRNA-seq sample sheet: 
     - [x] [google spreadsheet](https://docs.google.com/spreadsheets/d/1plhIL1rH2IuQ8b_komjAUHKKrnYPNDyhvNNRsTv74u8/edit?ts=5d406b84#gid=1078838729) owned by Ignacio
-    - [x] downloaded copy, Dec 3rd, 2020: [`_data/small/MSK SPECTRUM - Single cell RNA-seq_v6.xlsx`](_data/small/MSK SPECTRUM - Single cell RNA-seq_v6.xlsx)
+    - [x] downloaded copy, Dec 3rd, 2020: [`_data/small/MSK\ SPECTRUM\ -\ Single\ cell\ RNA-seq_v6.xlsx`](_data/small/MSK\ SPECTRUM\ -\ Single\ cell\ RNA-seq_v6.xlsx)
 - [x] color code: [`_data/small/signatures/hgsc_v6_colors.yaml`](_data/small/signatures/hgsc_v6_colors.yaml)
-- [x] mutational signature consensus labels: 
+- [ ] mutational signature consensus labels: 
 
 ## Preprocessing scripts
 
@@ -61,7 +61,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [ ] Ovarian.cancer.cell.super [`_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd`](_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd)
     
 - [ ] cell type specific tasks
-    - [ ] Cancer cells: filter out low quality cells <1% mito reads
+    - [ ] Cancer cells: filter out low quality cells <1% mito reads and recluster []()
     - [ ] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
     - [ ] Myeloid cells: run diffusion map on macrophage subset
 
@@ -79,11 +79,14 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 **Cohort level**
 
-[`110_cohort_plotting.Rmd`](110_cohort_plotting.Rmd)
+[`110_cohort_plotting_umap.Rmd`](110_cohort_plotting_umap.Rmd)
 
 - [ ] UMAP embeddings
 - [ ] Patient specificity
 - [ ] TCGA subtypes
+
+[`115_cohort_plotting_composition.Rmd`](110_cohort_plotting_composition.Rmd)
+
 - [ ] Composition barplots
 
 **Cancer cell**
@@ -92,7 +95,6 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 - [ ] UMAP embeddings
 - [ ] Composition barplots
-- [ ] Marker heatmap
 
 **T cell**
 

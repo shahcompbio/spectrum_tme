@@ -560,6 +560,13 @@ Ovarian.cancer.cell:
   - CLDN1
   - EREG
   - NDUFB5
+  Secretory.cell.6:
+  - CXCL10
+  - ISG15
+  - IFIT3
+  - IFIT1
+  - MX1
+  - IFIT2
   Ciliated.cell.1:
   - C20orf85
   - CAPS
