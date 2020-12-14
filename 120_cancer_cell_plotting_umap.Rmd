@@ -197,16 +197,24 @@ umap_cluster <- base_umap +
 cluster_legend <- cowplot::get_legend(umap_pca_cluster)
 
 umap_pca_jak_stat <- base_umap + 
+  # geom_point(aes(umappca_1, umappca_2), color = "grey80",
+  #            size = pt.size, alpha = pt.alpha, 
+  #            data = filter(plot_data, JAK.STAT.pathway <= 0)) +
   geom_point(aes(umappca_1, umappca_2, color = JAK.STAT.pathway), 
-             size = pt.size, alpha = pt.alpha) +
+             size = pt.size, alpha = pt.alpha, 
+             data = mutate(plot_data, JAK.STAT.pathway = ifelse(JAK.STAT.pathway > 4, 4, JAK.STAT.pathway))) +
   geom_text(aes(umappca_1, umappca_2, label = patient_id_short), data = median_tbl) + 
-  scale_color_gradientn(colours = viridis(9)) +
+  scale_color_gradientn(colours = viridis(9), breaks = c(0, 2, 4), limits = c(min(plot_data$JAK.STAT.pathway), 4), labels = c(0, 2, "≥4")) +
   labs(title = "JAK-STAT signaling")
 
 umap_jak_stat <- base_umap + 
+  # geom_point(aes(umapharmony_1, umapharmony_2), color = "grey80",
+  #            size = pt.size, alpha = pt.alpha, 
+  #            data = filter(plot_data, JAK.STAT.pathway <= 0)) +
   geom_point(aes(umapharmony_1, umapharmony_2, color = JAK.STAT.pathway), 
-             size = pt.size, alpha = pt.alpha) +
-  scale_color_gradientn(colours = viridis(9)) +
+             size = pt.size, alpha = pt.alpha, 
+             data = mutate(plot_data, JAK.STAT.pathway = ifelse(JAK.STAT.pathway > 4, 4, JAK.STAT.pathway))) +
+  scale_color_gradientn(colours = viridis(9), breaks = c(0, 2, 4), limits = c(min(plot_data$JAK.STAT.pathway), 4), labels = c(0, 2, "≥4")) +
   guides(color = F) + 
   labs(title = "")
 
@@ -403,11 +411,13 @@ cluster_comp <- plot_data %>%
 cluster_comp_rank <- cluster_comp %>% 
   distinct(sample, .keep_all = T) %>% 
   filter(sort_short_x == "CD45-") %>% 
+  mutate(sample = ordered(sample, levels = unique(as.character(sample)))) %>% 
   mutate(sample_rank = scales::rescale(as.numeric(sample), c(-1, 1)))
 
 p1 <- comp_plot_wrapper(cluster_comp, "CD45-", "n", x = "sample", fill = "cluster_label", super_type = "Ovarian.cancer.cell")
 p2 <- comp_plot_wrapper(cluster_comp, "CD45-", "nrel", x = "sample", fill = "cluster_label", super_type = "Ovarian.cancer.cell")
 p3 <- comp_label_boxplot(cluster_comp_rank, x = "consensus_signature", y = "sample_rank", clr = "consensus_signature", cts = "CD45-")
+
 
 pcomp_grid_p_full <- plot_grid(p1, p2, p3,
                                ncol = 1, align = "v",
