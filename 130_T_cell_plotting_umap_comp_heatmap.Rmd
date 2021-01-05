@@ -36,18 +36,25 @@ library(cowplot)
 library(colorblindr)
 library(viridis)
 library(ComplexHeatmap)
+library(grid)
 
-theme_cowplot2 <- function(...) {
-  theme_cowplot(font_size = 12, ...) %+replace%
-    theme(strip.background = element_blank(),
-          plot.background = element_blank())
-}
-theme_set(theme_cowplot2())
 coi <- params$cell_type
 cell_sort <- params$cell_sort
 cell_type_major <- params$cell_type_major
 louvain_resolution <- params$louvain_resolution
 pcut <- params$pcut
+
+# p1 <- ggplot(data.frame(x = 1:5, y = 1:5), aes(x, y)) + geom_point()
+# vp_outer <- viewport(x = 0.5, y = 0.5, width = 0.5, height = 0.5, angle = 90)
+# vp_inner <- viewport(x = 0.5, y = 0.5, width = 1, height = 1, angle = 0)
+# grid.newpage()
+# pushViewport(vp_outer)
+# grid.rect()
+# print(p1, vp = vp_inner)
+# popViewport(1)
+# g1 <- grid.grab()
+# ggdraw() + draw_grob(g1)
+
 
 ```
 
@@ -182,7 +189,8 @@ common_layers_disc <- list(
   ggrastr::geom_point_rast(size = pt_size, alpha = alpha_lvl, raster.dpi = 150),
   NoAxes(),
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1))),
-  labs(color = "")
+  labs(color = ""),
+  theme(aspect.ratio = 1)
 )
 
 common_layers_cont <- list(  
@@ -279,7 +287,10 @@ ha_row <- rowAnnotation(
 ha_col <- columnAnnotation(
   `Cell type` = colnames(plot_data_markers_mat)[-c(1:3)],
   col = list(`Cell type` = clrs$cluster_label[[coi]]),
-  show_legend = F
+  show_legend = F,
+  annotation_name_side = "left",
+  annotation_name_rot = 180
+  
 )
 
 gene_idx <- !is.na(plot_data_markers_mat$rank)
@@ -290,7 +301,7 @@ ha_genes <- rowAnnotation(
     labels = plot_data_markers_mat$gene[gene_idx], 
     labels_gp = gpar(fontsize = 10), padding = unit(1, "mm"),
     side = "left", 
-    labels_rot = 180,
+    labels_rot = 180
   )
 )
 
@@ -307,14 +318,14 @@ marker_heatmap <- Heatmap(
   column_names_side = "bottom",
   right_annotation = ha_row,
   left_annotation = ha_genes,
-  # top_annotation = ha_col,
+  bottom_annotation = ha_col,
   cluster_rows = F, 
   row_title = NULL,
   column_title = NULL,
   col = viridis(9)
 )
 
-marker_heatmap
+# marker_heatmap
 
 ```
 
@@ -345,7 +356,8 @@ comp_tbl_sample_sort <- plot_data_sub %>%
   group_by(cluster_label, sort_short_x) %>% 
   mutate(rank_T.cell = row_number(sample_id_T.cell)) %>% 
   mutate(rank_T.cell = scales::rescale(rank_T.cell, c(-1, 1))) %>% 
-  ungroup
+  ungroup %>% 
+  mutate(cell_type = "T.cell")
 
 comp_norm_factor_tbl <- filter(comp_tbl_sample_sort, tumor_supersite == "Adnexa") %>% 
   group_by(cluster_label) %>% 
@@ -391,66 +403,129 @@ comp_tbl_sample_sort_norm_mutsig <- comp_tbl_sample_sort %>%
 
 ```{r chunk_090, fig.width=7, fig.height=4}
 
-comp_plot_wrapper <- function(comp_tbl = comp_tbl_sample_sort, cts, y = "nrel", x = "tumor_subsite", fill = "cluster_label", switch = NULL, facet = T) {
-  # if (facet == F) comp_tbl <- na.omit(comp_tbl)
+comp_plot_wrapper <- function(comp_tbl = comp_tbl_sample_sort, cts, y = "nrel", x = "tumor_subsite", fill = "cell_type", switch = NULL, facet = F, exclude_ascites = F, super_type = NULL) {
+  if (facet == F) comp_tbl <- filter(comp_tbl, !is.na(tumor_supersite))
+  if (exclude_ascites == T) comp_tbl <- filter(comp_tbl, tumor_supersite != "Ascites")
   if (y == "nrel") ylab <- paste0("% cells")
   if (y == "log10n") ylab <- paste0("# cells")
   if (y == "n") ylab <- paste0("# cells")
-  p <- ggplot(filter(comp_tbl, sort_short_x == cts), 
-              aes_string(x, y, fill = fill)) + 
-    scale_fill_manual(values = clrs$cluster_label[[coi]]) + 
+  p <- ggplot(filter(comp_tbl, sort_short_x == cts),
+              aes_string(x, y, fill = fill)) +
     theme(axis.text.x = element_blank(),
           axis.ticks.x = element_blank(),
           axis.title.x = element_blank(),
           axis.line.x = element_blank(),
-          # axis.title.y = element_text(margin = margin(0, -1, 0, 1, unit = "npc")),
+          axis.title.y = element_text(margin = margin(0, -1, 0, 1, unit = "npc")),
           strip.text.y = element_blank(),
           strip.background.y = element_blank(),
-          plot.margin = grid::unit(c(0.03, 0.01, 0.01, 0.01), "npc")) + 
-    #scale_x_discrete(expand = c(0, 0)) + 
+          plot.margin = grid::unit(c(0.04, 0.01, 0.02, 0.01), "npc")) +
+    #scale_x_discrete(expand = c(0, 0)) +
     labs(x = "",
          y = ylab) +
     guides(fill = FALSE)
-  if (facet == T) p <- p + 
-    facet_grid(sort_short_x~tumor_supersite, 
+  if (fill != "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]])
+  if (fill == "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]][[super_type]])
+  if (facet == "tumor_supersite") p <- p +
+    facet_grid(sort_short_x~tumor_supersite,
                space = "free", scales = "free", switch = switch)
-  if (facet == F) p <- p + 
-    facet_grid(sort_short_x~., 
+  if (facet == "consensus_signature") p <- p +
+    facet_grid(sort_short_x~consensus_signature,
                space = "free", scales = "free", switch = switch)
-  if (y == "nrel") p <- p + 
+  if (facet == "patient_id_short") p <- p +
+    facet_grid(sort_short_x~patient_id_short,
+               space = "free", scales = "free", switch = switch)
+  if (facet == F) p <- p +
+    facet_grid(sort_short_x~.,
+               space = "free", scales = "free", switch = switch)
+  if (y == "nrel") p <- p +
     geom_bar(stat = "identity", width = 1) +
-    scale_y_continuous(expand = c(0, 0), 
-                       breaks = c(0, 50, 100), 
-                       labels = c("0", "50", "100")) + 
+    scale_y_continuous(expand = c(0, 0),
+                       breaks = c(0, 50, 100),
+                       labels = c("0", "50", "100")) +
     theme(strip.text.x = element_blank(),
           strip.background.x = element_blank())
-  if (y == "log10n") p <- p + 
+  if (y == "log10n") p <- p +
     geom_bar(stat = "identity", position = position_dodge2(preserve = "single"), width = 1) +
-    scale_y_continuous(expand = c(0, 0), 
+    scale_y_continuous(expand = c(0, 0),
                        breaks = c(1, 2, 3),
                        limits = c(0, 4),
                        labels = function(x) parse(text = paste("10^", x))) +
     expand_limits(y = c(0, 4)) +
     theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5))
-  if (y == "n") p <- p + 
+  if (y == "n") p <- p +
     geom_bar(stat = "identity", position = position_stack(), width = 1) +
-    scale_y_continuous(expand = c(0, 0), 
-                       breaks = c(0, 2500, 5000),
-                       limits = c(0, 5000),
-                       labels = c("", "2500", "5000")) +
-    expand_limits(y = c(0, 5000)) +
+    scale_y_continuous(expand = c(0, 0),
+                       breaks = c(0, 2500, 5000, 7500),
+                       limits = c(0, 7500),
+                       labels = c("", "2500", "5000", "7500")) +
+    expand_limits(y = c(0, 7500)) +
     theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5),
-          plot.title = element_text(face = "plain", size = 14, 
-                                    hjust = 0.5, vjust = 0.5))
+          plot.title = element_text(face = "plain", size = 14,
+                                    hjust = 0.5, vjust = 0.5)) +
+    labs(title = cts)
   return(p)
-} 
+}
 
-pcomp1 <- comp_plot_wrapper(comp_tbl_sample_sort, cell_sort, "n", x = "sample_id_T.cell", facet = T)
-pcomp2 <- comp_plot_wrapper(comp_tbl_sample_sort, cell_sort, "nrel", x = "sample_id_T.cell", facet = T)
+comp_label_boxplot <- function(comp_tbl = comp_tbl_sample_sort, x = "tumor_supersite", y = "rank_T.cell", facet = T, cts = c("CD45-", "CD45+"), clr = "tumor_supersite", ct = names(clrs$cell_type), pvals = F, exclude_ascites = F) {
+  if (facet == F) comp_tbl <- filter(comp_tbl, !is.na(tumor_supersite))
+  if (exclude_ascites == T) comp_tbl <- filter(comp_tbl, tumor_supersite != "Ascites")
+  # rank_tests_sub <- filter(rank_tests, sort_short_x %in% cts, pval < 0.05) %>%
+  #   mutate(pstar = "*")
+  required_columns <- c("tumor_subsite", "tumor_supersite", "consensus_signature", "BRCA1_status", "BRCA2_status", "BRCA_status", "label_supersite", "patient_id_short", "sample_id_Myeloid.cell", "sample_id_T.cell", "rank_T.cell", "sample_id_Fibroblast", "sample_id_Ovarian.cancer.cell", "rank_Ovarian.cancer.cell", "sample_id_B.cell", "sample_id_Plasma.cell", "rank_IR", "sample_id_IR", "rank_MC", "sample_id_MC", "sample_cd45p", "sample_rank")
+  missing_columns <- required_columns[!(required_columns %in% colnames(comp_tbl))]
+  comp_tbl <- bind_cols(comp_tbl, matrix(rep("distinct_helper", n = length(missing_columns)), ncol = length(missing_columns)) %>% set_colnames(missing_columns) %>% as_tibble())
+  p <- ggplot(
+    distinct(filter(comp_tbl, therapy == "pre-Rx", sort_short_x %in% cts, cell_type %in% ct), tumor_subsite, tumor_supersite, consensus_signature, BRCA1_status, BRCA2_status, BRCA_status, label_supersite, patient_id_short, sample_id_Myeloid.cell, sample_id_T.cell, rank_T.cell, sample_id_Fibroblast, sample_id_Ovarian.cancer.cell, rank_Ovarian.cancer.cell, sample_id_B.cell, sample_id_Plasma.cell, rank_IR, sample_id_IR, rank_MC, sample_id_MC, sample_cd45p, sample_rank)
+     # distinct(filter(comp_tbl, therapy == "pre-Rx", sort_short_x %in% cts, cell_type %in% ct), -n, -log10n, -nrel)
+    ) +
+    geom_tile(aes_string(x, y, fill = clr),
+              alpha = 0.8) +
+    geom_boxplot(aes_string(x, y, fill = clr),
+                 width = 0.35, size = 2.5, color = "white", outlier.shape = NA) +
+    geom_boxplot(aes_string(x, y, color = clr),
+                 width = 0.35, size = 1, fill = "white", outlier.shape = NA) +
+    geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
+    scale_fill_manual(values = clrs[[clr]]) +
+    scale_color_manual(values = clrs[[clr]]) +
+    coord_flip(clip = "off", ylim = c(-1.01, 1.01)) +
+    theme(axis.title.y = element_blank(),
+          strip.text = element_blank(),
+          strip.background = element_blank(),
+          plot.margin = ggplot2::margin(0.04, 0.05, 0.02, 0.01, "npc")) +
+    scale_x_discrete(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0), breaks = c(-1, 0, 1)) +
+    guides(fill = F, color = F) +
+    labs(y = "Scaled rank")
+  if (facet == T) p <- p + facet_grid(label_supersite~patient_id_short,
+                                      space = "free", scales = "free")
+  if (facet == F) p <- p + facet_grid(label_supersite~.,
+                                      space = "free", scales = "free")
+  if (pvals == T) p <- p +
+    geom_text(aes(x = comparison, y = 1.05, label = pstar), data = rank_tests_sub, hjust = 0.5, vjust = 1, size = 5, angle = 90) #+
+    # geom_segment(aes(x = "Adnexa", xend = comparison, y = 1.07, yend = 1.07), data = rank_tests_sub)
+  return(p)
+}
+
+```
+
+```{r chunk_092, fig.width=7, fig.height=4}
+
+comp_tbl_box_data <- comp_tbl_sample_sort %>% 
+  filter(cluster_label == "CD4.T.naive") %>% 
+  distinct(rank_T.cell, .keep_all = T) %>% 
+  mutate(cell_type = "T.cell",
+         tumor_supersite = str_replace_all(tumor_supersite, "Upper Quadrant", "UQ"))
+
+# comp_label_boxplot(comp_tbl_box_data)
+# comp_label_boxplot(comp_tbl_box_data, x = "consensus_signature", clr = "consensus_signature")
+
+pcomp1 <- comp_plot_wrapper(comp_tbl_sample_sort, cell_sort, "n", x = "sample_id_T.cell", facet = F)
+pcomp2 <- comp_plot_wrapper(comp_tbl_sample_sort, cell_sort, "nrel", x = "sample_id_T.cell", facet = F)
 
 pcomp_grid_p <- plot_grid(pcomp1, pcomp2, 
+                          comp_label_boxplot(comp_tbl_box_data),
                           ncol = 1, align = "v", 
-                          rel_heights = c(0.5, 0.5))
+                          rel_heights = c(0.3, 0.3, 0.4))
 
 ```
 
@@ -546,26 +621,27 @@ wilcoxon_tbl <- lapply(cl_names, function(y) wilcoxon_site_wrapper(comp_tbl_samp
 
 ```
 
-```{r chunk_110, fig.width=12.5, fig.height=8}
+```{r chunk_110, fig.width=16, fig.height=4}
+
+heatmap_grob <- grid.grabExpr(draw(marker_heatmap), width = 4, height = 8)
+vp_outer <- viewport(x = 0.5, y = 0.5, width = 0.5, height = 2, angle = 270)
+vp_inner <- viewport(x = 0.5, y = 0.5, width = 1, height = 1, angle = 0)
+grid.newpage()
+pushViewport(vp_outer)
+grid.draw(heatmap_grob)
+popViewport(1)
+heatmap_grob_rot <- grid.grab()
 
 ggdraw() +
   draw_plot(add_umap_coord(umap_cell_type_void, size = 2.5, x = 0),
-            x = 0, y = 0, width = 0.3, height = 1) +
-  # draw_plot(umap_cell_type_legend,
-  #           x = 0.21, y = 0.75, width = 0.1, height = 0.25) +
-  # draw_plot(add_umap_coord(umap_site_void, size = 2.5, x = 0),
-  #           x = 0.37, y = 0.75, width = 0.16, height = 0.25) +
-  # draw_plot(umap_site_legend,
-  #           x = 0.52, y = 0.75, width = 0.1, height = 0.25) +
-  # draw_plot(pcomp_grid_p,
-  #           x = 0.005, y = 0.46, width = 0.58, height = 0.25) +
-  # draw_plot(comp_boxplot_grid,
-  #           x = 0, y = 0, width = 0.63, height = 0.4) +
-  draw_grob(grid.grabExpr(draw(marker_heatmap), width = 5, height = 8),
-            x = 0.6, y = 0, width = 0.4, height = 1, ) +
-  draw_plot_label(c("A", "B", "C", "D"), x = c(0, 0.63, 0, 0), y = c(0.995, 0.995, 0.72, 0.45))
+            x = 0, y = 0, width = 0.25, height = 1) +
+  draw_grob(heatmap_grob_rot,
+            x = 0.25, y = 0, width = 0.5, height = 1) +
+  draw_plot(pcomp_grid_p,
+            x = 0.8, y = 0, width = 0.15, height = 1) +
+  # draw_plot_label(c("A", "B", "C", "D"), x = c(0, 0.63, 0, 0), y = c(0.995, 0.995, 0.72, 0.45))
 
-ggsave("_fig/004_T_cell/004_T.cell_umap.png", width = 12.5, height = 6)
+ggsave("_fig/004_T_cell/004_T.cell_umap.png", width = 16, height = 4)
 
 ```
 

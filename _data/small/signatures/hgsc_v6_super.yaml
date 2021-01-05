@@ -1,4 +1,4 @@
-T.cell:
+T.super:
   CD4.T.naive:
   - CD4
   - IL7R

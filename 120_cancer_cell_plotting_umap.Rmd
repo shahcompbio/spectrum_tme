@@ -51,43 +51,14 @@ remove_guides <- guides(color = F, fill = F, shape = F, alpha = F)
 
 ```{r chunk_020}
 
-### load all data ---------------------------------
+## load global vars: 
+source("_src/global_vars.R")
 
-helper_f <- function(x) ifelse(is.na(x), "", x)
-markers_v5 <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_major.yaml")
-
-helper_f2 <- function(x) select(unnest(enframe(x, "subtype", "gene"), cols = gene), gene, subtype)
-markers_v5_super <- lapply(yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_super.yaml"), helper_f2)
-
-clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_colors.yaml") %>% 
-  lapply(function(x) map_depth(x, vec_depth(x)-2, unlist))
-
-clrs$patient_id_short <- clrs$patient_id
-names(clrs$patient_id_short) <- str_remove_all(names(clrs$patient_id), "SPECTRUM-OV-")
-
-```
-
-```{r chunk_030}
-
-## load meta data
-meta_tbl <- read_excel("/home/uhlitzf/spectrum_tme/_data/small/MSK SPECTRUM - Single cell RNA-seq_v6.xlsx", sheet = 2) %>% 
-  filter(!(patient_id %in% c("SPECTRUM-OV-100", "SPECTRUM-OV-099")),
-         therapy == "pre-Rx") %>% 
-  rename(sample = isabl_id) %>% 
-  mutate(patient_id_short = str_remove_all(patient_id, "SPECTRUM-OV-"),
-         sort_short = str_remove_all(sort_parameters, "singlet, live, "),
-         tumor_supersite = str_replace_all(tumor_supersite, "Upper Quadrant", "UQ")) %>% 
-  mutate(tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite)))
-
-## load wgs meta data
-signature_tbl <- read_tsv("/home/uhlitzf/spectrum_tme/_data/small/mutational_signatures_summary.tsv") %>%
-  select(patient_id, consensus_signature) %>% 
-  bind_rows(tibble(patient_id = unique(sort(meta_tbl$patient_id[!(meta_tbl$patient_id %in% .$patient_id)])), consensus_signature = "NA")) %>% 
-  mutate(consensus_signature = ordered(consensus_signature, levels = names(clrs$consensus_signature))) %>% 
-  arrange(consensus_signature) %>% 
-  distinct(patient_id, .keep_all = T)
-
-meta_tbl <- left_join(meta_tbl, signature_tbl, by = "patient_id")
+# meta_tbl
+# clrs
+# markers_v6
+# markers_v6_super
+# cell_type_super_lookup
 
 ```
 
@@ -98,6 +69,19 @@ meta_tbl <- left_join(meta_tbl, signature_tbl, by = "patient_id")
 # seu_obj_cc <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/Ovarian.cancer.cell_processed_filtered.rds"))
 seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds")
 markers_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv")
+
+
+plot_data <- FetchData(seu_obj_cc, c("sample", grep("^HLA", rownames(seu_obj_cc), value = T))) %>%
+  as_tibble() %>% 
+  gather(gene, value, -sample) %>% 
+  left_join(meta_tbl, by = "sample") %>% 
+  group_by(consensus_signature, gene, sample, patient_id_short) %>% 
+  summarise(value = median(value))
+
+ggplot(plot_data) + 
+  geom_tile(aes(sample, gene, fill = value)) +
+  scale_fill_viridis() +
+  facet_grid(~consensus_signature, scales = "free_x", space = "free_x")
 
 ```
 
@@ -223,175 +207,6 @@ umap_jak_stat <- base_umap +
 
 ```{r chunk_062, fig.width=12, fig.height=8}
 
-comp_plot_wrapper <- function(comp_tbl = comp_tbl_sample_sort, cts, y = "nrel", x = "tumor_subsite", fill = "cell_type", switch = NULL, facet = F, exclude_ascites = F, super_type = NULL) {
-  if (facet == F) comp_tbl <- filter(comp_tbl, !is.na(tumor_supersite))
-  if (exclude_ascites == T) comp_tbl <- filter(comp_tbl, tumor_supersite != "Ascites")
-  if (y == "nrel") ylab <- paste0("% cells")
-  if (y == "log10n") ylab <- paste0("# cells")
-  if (y == "n") ylab <- paste0("# cells")
-  p <- ggplot(filter(comp_tbl, sort_short_x == cts),
-              aes_string(x, y, fill = fill)) +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          axis.title.x = element_blank(),
-          axis.line.x = element_blank(),
-          axis.title.y = element_text(margin = margin(0, -1, 0, 1, unit = "npc")),
-          strip.text.y = element_blank(),
-          strip.background.y = element_blank(),
-          plot.margin = grid::unit(c(0.04, 0.01, 0.02, 0.01), "npc")) +
-    #scale_x_discrete(expand = c(0, 0)) +
-    labs(x = "",
-         y = ylab) +
-    guides(fill = FALSE)
-  if (fill != "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]])
-  if (fill == "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]][[super_type]])
-  if (facet == "tumor_supersite") p <- p +
-    facet_grid(sort_short_x~tumor_supersite,
-               space = "free", scales = "free", switch = switch)
-  if (facet == "consensus_signature") p <- p +
-    facet_grid(sort_short_x~consensus_signature,
-               space = "free", scales = "free", switch = switch)
-  if (facet == "patient_id_short") p <- p +
-    facet_grid(sort_short_x~patient_id_short,
-               space = "free", scales = "free", switch = switch)
-  if (facet == F) p <- p +
-    facet_grid(sort_short_x~.,
-               space = "free", scales = "free", switch = switch)
-  if (y == "nrel") p <- p +
-    geom_bar(stat = "identity", width = 1) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 50, 100),
-                       labels = c("0", "50", "100")) +
-    theme(strip.text.x = element_blank(),
-          strip.background.x = element_blank())
-  if (y == "log10n") p <- p +
-    geom_bar(stat = "identity", position = position_dodge2(preserve = "single"), width = 1) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = c(1, 2, 3),
-                       limits = c(0, 4),
-                       labels = function(x) parse(text = paste("10^", x))) +
-    expand_limits(y = c(0, 4)) +
-    theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5))
-  if (y == "n") p <- p +
-    geom_bar(stat = "identity", position = position_stack(), width = 1) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 2500, 5000, 7500),
-                       limits = c(0, 7500),
-                       labels = c("", "2500", "5000", "7500")) +
-    expand_limits(y = c(0, 7500)) +
-    theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5),
-          plot.title = element_text(face = "plain", size = 14,
-                                    hjust = 0.5, vjust = 0.5)) +
-    labs(title = cts)
-  return(p)
-}
-
-common_label_layers <- list(
-  theme(axis.title.y = element_blank(),
-        strip.text = element_blank(),
-        strip.background = element_blank(),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        axis.ticks = element_blank(),
-        axis.line.x = element_blank(),
-        plot.margin = ggplot2::margin(0.02, 0.01, 0.02, 0.01, "npc")),
-  scale_y_discrete(expand = c(0, 0)),
-  guides(fill = F, color = F)
-)
-
-comp_label <- function(x = "tumor_subsite", y = "label_supersite", fill = "tumor_supersite", facet = F, cts = c("CD45-", "CD45+")) {
-  comp_tbl <- comp_tbl_sample_sort
-  if (facet == F) comp_tbl <- filter(comp_tbl, !is.na(tumor_supersite))
-  p <- ggplot(distinct(filter(comp_tbl, therapy == "pre-Rx", sort_short_x %in% cts), tumor_subsite, tumor_supersite, consensus_signature, label_supersite, label_mutsig, patient_id_short, sample_id_Myeloid.cell, sample_id_T.cell, rank_T.cell, sample_id_Fibroblast, sample_id_Ovarian.cancer.cell, rank_Ovarian.cancer.cell, sample_id_B.cell, sample_id_Plasma.cell),
-              aes_string(x, y, fill = fill)) +
-    geom_tile() +
-    common_label_layers
-  if (fill != "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]])
-  if (fill == "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]][[super_type]])
-  if (facet == "patient_id_short") p <- p + facet_grid(label_supersite~patient_id_short,
-                                      space = "free", scales = "free")
-  if (facet == "tumor_supersite") p <- p + facet_grid(label_supersite~tumor_supersite,
-                                      space = "free", scales = "free")
-  if (facet == F) p <- p + facet_grid(label_supersite~.,
-                                      space = "free", scales = "free")
-  return(p)
-}
-
-comp_label_boxplot <- function(comp_tbl = comp_tbl_sample_sort, x = "tumor_supersite", y = "rank_T.cell", facet = T, cts = c("CD45-", "CD45+"), clr = "tumor_supersite", ct = names(clrs$cell_type), pvals = F, exclude_ascites = F) {
-  if (facet == F) comp_tbl <- filter(comp_tbl, !is.na(tumor_supersite))
-  if (exclude_ascites == T) comp_tbl <- filter(comp_tbl, tumor_supersite != "Ascites")
-  # rank_tests_sub <- filter(rank_tests, sort_short_x %in% cts, pval < 0.05) %>%
-  #   mutate(pstar = "*")
-  required_columns <- c("tumor_subsite", "tumor_supersite", "consensus_signature", "BRCA1_status", "BRCA2_status", "BRCA_status", "label_supersite", "patient_id_short", "sample_id_Myeloid.cell", "sample_id_T.cell", "rank_T.cell", "sample_id_Fibroblast", "sample_id_Ovarian.cancer.cell", "rank_Ovarian.cancer.cell", "sample_id_B.cell", "sample_id_Plasma.cell", "rank_IR", "sample_id_IR", "rank_MC", "sample_id_MC", "sample_cd45p", "sample_rank")
-  missing_columns <- required_columns[!(required_columns %in% colnames(comp_tbl))]
-  comp_tbl <- bind_cols(comp_tbl, matrix(rep("distinct_helper", n = length(missing_columns)), ncol = length(missing_columns)) %>% set_colnames(missing_columns) %>% as_tibble())
-  p <- ggplot(
-    distinct(filter(comp_tbl, therapy == "pre-Rx", sort_short_x %in% cts, cell_type %in% ct), tumor_subsite, tumor_supersite, consensus_signature, BRCA1_status, BRCA2_status, BRCA_status, label_supersite, patient_id_short, sample_id_Myeloid.cell, sample_id_T.cell, rank_T.cell, sample_id_Fibroblast, sample_id_Ovarian.cancer.cell, rank_Ovarian.cancer.cell, sample_id_B.cell, sample_id_Plasma.cell, rank_IR, sample_id_IR, rank_MC, sample_id_MC, sample_cd45p, sample_rank)
-     # distinct(filter(comp_tbl, therapy == "pre-Rx", sort_short_x %in% cts, cell_type %in% ct), -n, -log10n, -nrel)
-    ) +
-    geom_tile(aes_string(x, y, fill = clr),
-              alpha = 0.8) +
-    geom_boxplot(aes_string(x, y, fill = clr),
-                 width = 0.35, size = 2.5, color = "white", outlier.shape = NA) +
-    geom_boxplot(aes_string(x, y, color = clr),
-                 width = 0.35, size = 1, fill = "white", outlier.shape = NA) +
-    geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
-    scale_fill_manual(values = clrs[[clr]]) +
-    scale_color_manual(values = clrs[[clr]]) +
-    coord_flip(clip = "off", ylim = c(-1.01, 1.01)) +
-    theme(axis.title.y = element_blank(),
-          strip.text = element_blank(),
-          strip.background = element_blank(),
-          plot.margin = ggplot2::margin(0.04, 0.05, 0.02, 0.01, "npc")) +
-    scale_x_discrete(expand = c(0, 0)) +
-    scale_y_continuous(expand = c(0, 0), breaks = c(-1, 0, 1)) +
-    guides(fill = F, color = F) +
-    labs(y = "Scaled rank")
-  if (facet == T) p <- p + facet_grid(label_supersite~patient_id_short,
-                                      space = "free", scales = "free")
-  if (facet == F) p <- p + facet_grid(label_supersite~.,
-                                      space = "free", scales = "free")
-  if (pvals == T) p <- p +
-    geom_text(aes(x = comparison, y = 1.05, label = pstar), data = rank_tests_sub, hjust = 0.5, vjust = 1, size = 5, angle = 90) #+
-    # geom_segment(aes(x = "Adnexa", xend = comparison, y = 1.07, yend = 1.07), data = rank_tests_sub)
-  return(p)
-}
-
-
-# ggdraw() + draw_plot(comp_label_boxplot(x = "tumor_supersite", y = "rank_T.cell", facet = F, cts = "CD45+", ct = "T cell", pvals = T), width = 0.9)
-
-hist_plot_wrapper <- function(cts, x = "nrel") {
-  if (x == "nrel") {
-    xlab <- paste0("% cells")
-    bw <- 5
-  }
-  if (x == "log10n") {
-    xlab <- paste0("# cells")
-    bw <- 0.2
-  }
-  p <- ggplot(filter(comp_tbl_sample_sort, sort_short_x == cts, !is.na(cell_type))) +
-    ggridges::geom_density_ridges(
-      aes_string(x, "cell_type", fill = "cell_type"), color = "black",
-      stat = "binline", binwidth = bw, scale = 3) +
-    facet_grid(label_supersite~label_therapy,
-               space = "free", scales = "free") +
-    scale_fill_manual(values = clrs$cell_type) +
-    theme(axis.text.y = element_blank(),
-          axis.ticks.y = element_blank(),
-          axis.title.y = element_blank(),
-          axis.line.y = element_blank(),
-          strip.text = element_blank(),
-          strip.background = element_blank(),
-          plot.margin = ggplot2::margin(0.02, 0, 0.02, 0, "npc")) +
-    scale_x_continuous(expand = c(0, 0)) +
-    scale_y_discrete(expand = c(0, 0)) +
-    guides(fill = FALSE) +
-    labs(x = xlab)
-  if (x == "log10n") p <- p + expand_limits(x = c(0, 4)) +
-    scale_x_continuous(expand = c(0, 0),
-                       labels = function(x) parse(text = paste("10^", x)))
-  return(p)
-}
 
 ```
 

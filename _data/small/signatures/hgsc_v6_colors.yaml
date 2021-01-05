@@ -48,11 +48,15 @@ tumor_supersite:
   Upper Quadrant: "#009E73" # palette_OkabeIto[5]
   UQ: "#009E73" # palette_OkabeIto[5]
   Other: "#b3b3b3"
+tumor_megasite:
+  Adnexa: 19
+  Ascites: 4
+  Other: 21
 therapy:
   post-Rx: "#ff0000"
   pre-Rx: "#4682b4"
 patient_id: 
-  SPECTRUM-OV-002: "#ff0000"
+  SPECTRUM-OV-002: "#ee2f00"
   SPECTRUM-OV-003: "#ee2f24"
   SPECTRUM-OV-007: "#f04e23"
   SPECTRUM-OV-008: "#f37120"
@@ -93,8 +97,9 @@ patient_id:
   SPECTRUM-OV-110: "#ec1472"
   SPECTRUM-OV-112: "#ed1b50"
   SPECTRUM-OV-115: "#ed1e2e"
+  SPECTRUM-OV-116: "#ff0000"
 cluster_label:
-  T.cell:
+  T.super:
     CD4.T.naive: "#43A047"
     CD4.T.dysfunctional: "#8BC34A"
     CD4.T.reg: "#C0CA33"
