@@ -32,10 +32,13 @@ clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_
 clrs$patient_id_short <- clrs$patient_id
 names(clrs$patient_id_short) <- str_remove_all(names(clrs$patient_id), "SPECTRUM-OV-")
 
+shps <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_shapes.yaml") %>% 
+  lapply(function(x) map_depth(x, vec_depth(x)-2, unlist))
+
 ## load meta data ----------------------------------
 
 meta_tbl <- read_excel("/home/uhlitzf/spectrum_tme/_data/small/MSK SPECTRUM - Single cell RNA-seq_v6.xlsx", sheet = 2) %>% 
-  filter(!(patient_id %in% c("SPECTRUM-OV-100", "SPECTRUM-OV-099")),
+  filter(!(patient_id %in% c("SPECTRUM-OV-100", "SPECTRUM-OV-099", "SPECTRUM-OV-118")),
          therapy == "pre-Rx") %>% 
   rename(sample = isabl_id) %>% 
   distinct(sample, .keep_all = T) %>% 
@@ -48,11 +51,12 @@ meta_tbl <- read_excel("/home/uhlitzf/spectrum_tme/_data/small/MSK SPECTRUM - Si
 
 ## load mutational signatures ----------------------
 
-signature_tbl <- read_tsv("/home/uhlitzf/spectrum_tme/_data/small/mutational_signatures_summary.tsv") %>%
+signature_tbl <- read_tsv("/home/uhlitzf/spectrum_tme/_data/small/mutational_signatures_summary_v3.tsv") %>%
   select(patient_id, consensus_signature) %>% 
-  bind_rows(tibble(patient_id = unique(sort(meta_tbl$patient_id[!(meta_tbl$patient_id %in% .$patient_id)])), consensus_signature = "NA")) %>% 
+  bind_rows(tibble(patient_id = unique(sort(meta_tbl$patient_id[!(meta_tbl$patient_id %in% .$patient_id)])), consensus_signature = "Undetermined")) %>% 
+  mutate(consensus_signature = ifelse(is.na(consensus_signature), "Undetermined", consensus_signature)) %>% 
   mutate(consensus_signature = ordered(consensus_signature, levels = names(clrs$consensus_signature))) %>% 
-  arrange(consensus_signature) %>% 
+  arrange(patient_id) %>% 
   distinct(patient_id, .keep_all = T)
 
 meta_tbl <- left_join(meta_tbl, signature_tbl, by = "patient_id")
@@ -63,7 +67,6 @@ cell_type_super_lookup <- c(
   B.cell = "Immune",
   Plasma.cell = "Immune",
   T.cell = "Immune", 
-  Monocyte = "Immune", 
   Myeloid.cell = "Immune", 
   Dendritic.cell = "Immune", 
   Endothelial.cell = "Stromal",

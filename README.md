@@ -17,10 +17,10 @@ Scripts are separated into preprocessing scripts and plotting scripts.
 
 The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analysis. 
 
-- [ ] Cohort expression object: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/`
-- [ ] Cohort embedding table: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/cells.tsv`
-- [ ] Cell type objects: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/{}.rds`
-- [ ] Cell type object cluster markers: `/work/shah/isabl_data_lake/analyses/68/76/6876/RNASCP/outs/{}_markers.tsv`
+- [x] SPECTRUM v6 pre-Rx cohort expression object: `/work/shah/isabl_data_lake/analyses/68/75/6875/RNASCP/outs/`
+- [x] SPECTRUM v6 pre-Rx cohort embedding table: `/work/shah/isabl_data_lake/analyses/68/75/6875/RNASCP/outs/cells.tsv`
+- [x] v6 cell type objects: `/work/shah/isabl_data_lake/analyses/68/75/6875/RNASCP/outs/{cell_type}.rds`
+- [x] v6 cell type cluster markers: `/work/shah/isabl_data_lake/analyses/68/76/6875/RNASCP/outs/{cell_type}_markers.tsv`
 
 **Meta data** 
 
@@ -30,7 +30,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [x] [google spreadsheet](https://docs.google.com/spreadsheets/d/1plhIL1rH2IuQ8b_komjAUHKKrnYPNDyhvNNRsTv74u8/edit?ts=5d406b84#gid=1078838729) owned by Ignacio
     - [x] downloaded copy, Dec 3rd, 2020: [`_data/small/MSK\ SPECTRUM\ -\ Single\ cell\ RNA-seq_v6.xlsx`](_data/small/MSK\ SPECTRUM\ -\ Single\ cell\ RNA-seq_v6.xlsx)
 - [x] color code: [`_data/small/signatures/hgsc_v6_colors.yaml`](_data/small/signatures/hgsc_v6_colors.yaml)
-- [ ] mutational signature consensus labels: 
+- [ ] mutational signature consensus labels: [`_data/small/mutational_signatures_summary_v3.tsv`](_data/small/mutational_signatures_summary_v3.tsv)
 
 ## Preprocessing scripts
 
@@ -44,7 +44,8 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [ ] summarized report of TCGA analysis [`_preprocessing/022_SPECTRUM_freeze_v6_TCGA_summary.Rmd`](_preprocessing/022_SPECTRUM_freeze_v6_TCGA_summary.Rmd)
 
 - [ ] output files and objects:
-    - [ ] consensusOV: `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/consensusOV/SPECTRUM_freeze_v6_consensusOV.tsv`
+    - [ ] patient specificity per cell
+    - [x] TCGA consensusOV: `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/consensusOV/SPECTRUM_freeze_v6_consensusOV.tsv`
 
 **Cell type subsets**
 
@@ -58,10 +59,10 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [ ] Fibroblast.super [`_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd`](_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd)
     - [ ] T.super [`_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd`](_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd)
     - [ ] Myeloid.super [`_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd`](_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd)
-    - [ ] Ovarian.cancer.cell.super [`_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd`](_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd)
+    - [x] Ovarian.cancer.cell.super [`_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd`](_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd)
     
 - [ ] cell type specific tasks
-    - [ ] Cancer cells: filter out low quality cells <1% mito reads and recluster []()
+    - [x] Cancer cells: filter out low quality cells <1% mito reads and recluster []()
     - [ ] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
     - [ ] Myeloid cells: run diffusion map on macrophage subset
 
@@ -70,7 +71,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [ ] `Fibroblast.super.annotated.rds`
     - [ ] `T.super.annotated.rds`
     - [ ] `Myeloid.super.annotated.rds`
-    - [ ] `Ovarian.cancer.cell.super.annotated.rds`
+    - [x] `Ovarian.cancer.cell.super.annotated.rds`
     - [ ] `CD8.T.cell.annotated.rds`
     - [ ] `Macrophage.annotated.rds`
 
@@ -81,7 +82,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 [`110_cohort_plotting_umap.Rmd`](110_cohort_plotting_umap.Rmd)
 
-- [ ] UMAP embeddings
+- [x] UMAP embeddings
 - [ ] Patient specificity
 - [ ] TCGA subtypes
 
@@ -93,7 +94,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 [`120_cancer_cell_plotting.Rmd`](120_cancer_cell_plotting.Rmd)
 
-- [ ] UMAP embeddings
+- [x] UMAP embeddings
 - [ ] Composition barplots
 
 **T cell**

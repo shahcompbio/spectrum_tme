@@ -22,8 +22,8 @@ louvain_resolution <- 0.2
 
 ### load all data ---------------------------------
 # seu_obj <- read_rds(paste0("/work/shah/isabl_data_lake/analyses/16/52/1652/celltypes/", coi, "_processed.rds"))
-seu_obj <- read_rds(paste0("/work/shah/isabl_data_lake/analyses/68/74/6874/RNASCP/outs/Ovarian.cancer.super_seurat_", louvain_resolution, ".rds"))
-seu_obj_sub <- subset(seu_obj, subset = nFeatures_RNA > 1000 & percent.mt > 1)
+seu_obj <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs_pre/Ovarian.cancer.super_seurat_", louvain_resolution, ".rds"))
+seu_obj_sub <- subset(seu_obj, subset = nFeature_RNA > 1000 & percent.mt > 1)
 set.seed(123)
 seu_obj_sample <- subset(seu_obj_sub, cells = sample(colnames(seu_obj_sub), 10000))
 

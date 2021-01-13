@@ -42,13 +42,26 @@ T.super:
   - MT1X
   - MT2A
   - MT1E
+  CD8.T.ISG:
+  - IFIT3
+  - ISG15
+  - IFIT1
+  - IFIT2
+  - ISG20
+  CD8.T.x:
+  - CXCL13
+  - GZMB
+  - FABP5
+  - TNFRSF9
+  - PKM
+  - NME1
   NK.CD56:
   - GNLY
   - NKG7
-  - TYROBP
-  - KLRD1
-  - KLRF1
-  - FCER1G
+#  - TYROBP
+#  - KLRD1
+#  - KLRF1
+#  - FCER1G
   - KLRC1
   - NCAM1
   - XCL1
@@ -60,10 +73,10 @@ T.super:
   NK.Cytotoxic:
   - GNLY
   - NKG7
-  - TYROBP
-  - KLRD1
-  - KLRF1
-  - FCER1G
+#  - TYROBP
+#  - KLRD1
+#  - KLRF1
+#  - FCER1G
   - FCGR3A
   - FGFBP2
   - SPON2
@@ -81,12 +94,13 @@ T.super:
   - CDK1
   - PTTG1
   MT.high.T.NK:
-  - XIST
-  - MTRNR2L12
-  - MALAT1
-  - IGKC
-  - MIAT
-  - MT-ND6
+  - HSPA1A
+  - HSPA1B
+  - MT1X
+  - DNAJB1
+  - MT1E
+  - HSPA6
+  - MT2A
 B.super:
   Cycling.B:
   - HIST1H4C
@@ -530,61 +544,51 @@ Fibroblast:
   - HILPDA
   - LDHA
 Ovarian.cancer.cell:
-  Secretory.cell.1:
-  - SLPI
-  - SST
-  - PLCG2
+  Cancer.cell.1:
+  - DAPL1
   - SCGB2A1
+  - SCGB1D2
+  - SNHG19
+  - FOLR1
+  Cancer.cell.2:
+  - S100A9
+  - KRT17
+  - LCN2
+  - TACSTD2
+  - IGFBP3
+  - SLPI
+  - S100A10
   - KRT7
-  Secretory.cell.2:
-  - OVGP1
-  - SCGB1A1
-  - SCGB3A1
-  - CRISP3
-  - AGR2
-  - TFF3
-  Secretory.cell.3:
-  - GAS6
-  - MTSS1
-  - TFF3
-  - SAMHD1
-  - FBXO32
-  Secretory.cell.4:
-  - AKAP12
   - MMP7
-  - DCDC2
-  - TSPAN1
-  - TSPAN18
-  Secretory.cell.5:
-  - CLDN16
-  - CLDN1
-  - EREG
-  - NDUFB5
-  Secretory.cell.6:
-  - CXCL10
+  Cancer.cell.3:
   - ISG15
+  - CXCL10
   - IFIT3
   - IFIT1
   - MX1
+  - IFI6
   - IFIT2
-  Ciliated.cell.1:
-  - C20orf85
-  - CAPS
-  - TPPP3
-  - PIFO
-  - CAPSL
-  Ciliated.cell.2:
-  - MMP7
-  - KRT14
-  - KRT5
-  - KRT16
-  - SLURP1
-  Endometrial.cell:
-  - PAEP
-  - HP
-  - PTGDS
-  - OBP2A
-  - SERINC2
+  Cancer.cell.4:
+  - COL1A1
+  - COL3A1
+  - COL1A2
+  - FN1
+  - SPARC
+  - DCN
+  Cancer.cell.5:
+  - OVGP1
+  - PLCG2
+  - CRISP3
+  - SNHG9
+  - CCND1
+  - PTMS
+  Cancer.cell.6:
+  - HSPA6
+  - FTL
+  - RACK1
+  - ZFAS1
+  - SCX
+  - MGP
   Cycling.cancer.cell.1:
   - CENPF
   - HMGB2
@@ -592,18 +596,36 @@ Ovarian.cancer.cell:
   - MKI67
   - TOP2A
   Cycling.cancer.cell.2:
-  - TMEM106C
-  - ATP5MC1
-  - PHB
-  - SNF8
-  - SNRPD1
-  doublet.Other:
-  - IGFBP7
-  - SPARCL1
-  - ITM2B
-  - CRISP3
-  - AGR2
-  - TFF3
+  - HIST1H4C
+  - TUBA1B
+  - PCLAF
+  - ATAD2
+  - H2AFZ
+  Ciliated.cell.1:
+  - C20orf85
+  - CAPS
+  - TPPP3
+  - PIFO
+  - CAPSL
+  Ciliated.cell.2:
+  - CFAP126
+  - PIFO
+  - DNALI1
+  - RSPH1
+  - C5orf49
+  Ciliated.cell.3:
+  - GPX3
+  - GNAS
+  - ATP5F1E
+  - DEFB1
+  - IMPA2
+  doublet.Immune.cell:
+  - IGKC
+  - IGLC3
+  - IGHG1
+  - IL7R
+  - CD52
+  - PTPRC
 CD8.T:
   CD8.T.naive:
   - TCF7

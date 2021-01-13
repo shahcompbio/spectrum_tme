@@ -43,7 +43,7 @@ wilcoxon_test <- function(comp_tbl_rank, rank_column, rank_value, test_var) {
 }
 
 ## composition bar plots
-plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F) {
+plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, super_type = NULL) {
   x <- enquo(x)
   y <- enquo(y)
   fill <- enquo(fill)
@@ -153,7 +153,7 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
                      color = vector_color),
                  arrow = arrow(type = "open", length = unit(0.04, "npc")),
                  data = comp_tbl_vector) +
-    scale_shape_manual(values = clrs[[as_label(shape)]]) +
+    scale_shape_manual(values = shps[[as_label(shape)]]) +
     scale_color_manual(values = clrs[[as_label(vector_column)]]) +
     scale_x_continuous(expand = c(0, 0), breaks = c(-1, 0, 1), labels = c(-1, 0, 1)) +
     labs(x = "Scaled rank", y = "Patient", shape = "Sample", color = "Fraction\nin non-adnexa") +
@@ -167,28 +167,42 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
 }
 
 
-default_comp_grid <- function(comp_tbl, rank_column, rank_value) {
+default_comp_grid_list <- function(comp_tbl, rank_column, rank_value, 
+                                   n_bar = T, nrel_bar = T, 
+                                   mutsig_box = T, site_box = T, vec_plot = T,
+                                   super_type = NULL) {
   rank_column <- enquo(rank_column)
   comp_tbl_rank <- rank_by(comp_tbl, !!rank_column, rank_value)
-  pbar1 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, n, 
-                         !!rank_column, facet = sort_short_x) +
-    remove_guides
-  pbar2 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, nrel, 
-                         !!rank_column, facet = sort_short_x) +
-    remove_guides
-  pbox1 <- plot_comp_box(comp_tbl_rank, sample_id_rank, consensus_signature, 
-                         consensus_signature, !!rank_column, rank_value) + 
-    remove_xaxis + remove_guides
-  pbox2 <- plot_comp_box(comp_tbl_rank, sample_id_rank, tumor_supersite, 
-                         tumor_supersite, !!rank_column, rank_value) + 
-    remove_xaxis + remove_guides
-  pvec <- plot_comp_vector(comp_tbl_rank, sample_id_rank, patient_id_short,
-                           tumor_megasite, tumor_supersite, "Adnexa", 
-                           !!rank_column, rank_value) +
-    remove_guides
-  plot_grid(pbar1, pbar2, pbox1, pbox2, pvec, ncol = 1, align = "v", 
-            labels = rank_value,
-            rel_heights = c(0.125, 0.125, 0.125, 0.125, 0.5))
+  plist <- list()
+  if (n_bar) {
+    plist$pbar1 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, n, 
+                                 !!rank_column, facet = sort_short_x, 
+                                 super_type = super_type) +
+      remove_guides
+  }
+  if (nrel_bar) {
+    plist$pbar2 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, nrel, 
+                                 !!rank_column, facet = sort_short_x, 
+                                 super_type = super_type) +
+      remove_guides
+  }
+  if (mutsig_box) {
+    plist$pbox1 <- plot_comp_box(comp_tbl_rank, sample_id_rank, consensus_signature, 
+                                 consensus_signature, !!rank_column, rank_value) + 
+      remove_xaxis + remove_guides
+  }
+  if (site_box) {
+    plist$pbox2 <- plot_comp_box(comp_tbl_rank, sample_id_rank, tumor_supersite, 
+                                 tumor_supersite, !!rank_column, rank_value) + 
+      remove_xaxis + remove_guides
+  }
+  if (vec_plot) {
+    plist$pvec <- plot_comp_vector(comp_tbl_rank, sample_id_rank, patient_id_short,
+                                   tumor_megasite, tumor_megasite, "Adnexa", 
+                                   !!rank_column, rank_value) +
+      remove_guides
+  }
+  return(plist)
 }
 
 # comp_tbl_sample %>% 

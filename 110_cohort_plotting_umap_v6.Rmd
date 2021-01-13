@@ -52,13 +52,13 @@ names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 ## load data --------------------------------------
 
 ## load cohort embeddings
-seu_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs/cells.tsv") %>% 
+seu_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs_pre/cells.tsv") %>% 
   mutate(cell_type = ifelse(cell_type == "Monocyte", "Myeloid.cell", cell_type)) %>% 
   mutate(cell_type = ifelse(cell_type == "Ovarian.cancer.cell", "Ov.cancer.cell", cell_type))
 
-seu_tbl <- read_tsv("/work/shah/isabl_data_lake/analyses/68/74/6874/cells.tsv") %>%
-  mutate(cell_type = ifelse(cell_type == "Monocyte", "Myeloid.cell", cell_type)) %>%
-  mutate(cell_type = ifelse(cell_type == "Ovarian.cancer.cell", "Ov.cancer.cell", cell_type))
+# seu_tbl <- read_tsv("/work/shah/isabl_data_lake/analyses/68/74/6874/cells.tsv") %>%
+#   mutate(cell_type = ifelse(cell_type == "Monocyte", "Myeloid.cell", cell_type)) %>%
+#   mutate(cell_type = ifelse(cell_type == "Ovarian.cancer.cell", "Ov.cancer.cell", cell_type))
 
 ## load consensus data
 consOV_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/consensusOV/SPECTRUM_freeze_v6_consensusOV.tsv") %>%
@@ -70,6 +70,8 @@ seu_tbl_full <- seu_tbl %>%
   left_join(meta_tbl, by = "sample") %>% 
   filter(therapy == "pre-Rx", cell_type != "Other", tumor_supersite != "Unknown") %>% 
   rename(UMAP_1 = umap50_1, UMAP_2 = umap50_2) %>% 
+  ## flip UMAP coordinates?
+  mutate(UMAP_1 = -UMAP_1, UMAP_2 = -UMAP_2) %>% 
   mutate(cell_type_super = cell_type_super_lookup[cell_type]) %>% 
   mutate(cell_type = ordered(str_replace_all(cell_type, "\\.", " "), 
                              levels = names(clrs$cell_type))) %>% 

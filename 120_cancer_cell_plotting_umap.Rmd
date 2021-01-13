@@ -31,22 +31,6 @@ library(viridis)
 library(magick, lib.loc = "/home/uhlitzf/miniconda3/lib/R/library")
 library(ggpubr)
 
-theme_cowplot2 <- function(...) {
-  theme_cowplot(font_size = 16, font_family = "sans", ...) %+replace%
-    theme(strip.background = element_blank(),
-          panel.background = element_rect(fill = "transparent", color = NA),
-          plot.background = element_rect(fill = "transparent", color = NA),
-          panel.border = element_blank())
-}
-theme_set(theme_cowplot2())
-
-remove_xaxis <- theme(axis.title.x = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.ticks.x = element_blank(),
-                      axis.line.x = element_blank())
-
-remove_guides <- guides(color = F, fill = F, shape = F, alpha = F)
-
 ```
 
 ```{r chunk_020}
@@ -70,18 +54,17 @@ source("_src/global_vars.R")
 seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds")
 markers_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv")
 
-
-plot_data <- FetchData(seu_obj_cc, c("sample", grep("^HLA", rownames(seu_obj_cc), value = T))) %>%
-  as_tibble() %>% 
-  gather(gene, value, -sample) %>% 
-  left_join(meta_tbl, by = "sample") %>% 
-  group_by(consensus_signature, gene, sample, patient_id_short) %>% 
-  summarise(value = median(value))
-
-ggplot(plot_data) + 
-  geom_tile(aes(sample, gene, fill = value)) +
-  scale_fill_viridis() +
-  facet_grid(~consensus_signature, scales = "free_x", space = "free_x")
+# plot_data <- FetchData(seu_obj_cc, c("sample", grep("^HLA", rownames(seu_obj_cc), value = T))) %>%
+#   as_tibble() %>% 
+#   gather(gene, value, -sample) %>% 
+#   left_join(meta_tbl, by = "sample") %>% 
+#   group_by(consensus_signature, gene, sample, patient_id_short) %>% 
+#   summarise(value = median(value))
+# 
+# ggplot(plot_data) + 
+#   geom_tile(aes(sample, gene, fill = value)) +
+#   scale_fill_viridis() +
+#   facet_grid(~consensus_signature, scales = "free_x", space = "free_x")
 
 ```
 
@@ -129,6 +112,7 @@ add_umap_coord <- function(gg_obj) {
 ```{r chunk_060}
 
 pt.size <- 0.1
+pt.size2 <- 0.2
 pt.size.mini <- 0.01
 pt.alpha <- 0.05
 pt.alpha.mini <- 0.02
@@ -150,7 +134,7 @@ umap_pca_mutsig <- base_umap +
 
 umap_mutsig <- base_umap + 
   geom_point(aes(umapharmony_1, umapharmony_2, color = consensus_signature), 
-             size = pt.size, alpha = pt.alpha) +
+             size = pt.size2, alpha = pt.alpha) +
   scale_color_manual(values = clrs$consensus_signature) +
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 1, 
@@ -170,7 +154,7 @@ umap_pca_cluster <- base_umap +
 
 umap_cluster <- base_umap + 
   geom_point(aes(umapharmony_1, umapharmony_2, color = cluster_label), 
-             size = pt.size, alpha = pt.alpha) +
+             size = pt.size2, alpha = pt.alpha) +
   scale_color_manual(values = clrs$cluster_label$Ovarian.cancer.cell) +
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 1, 
@@ -196,78 +180,34 @@ umap_jak_stat <- base_umap +
   #            size = pt.size, alpha = pt.alpha, 
   #            data = filter(plot_data, JAK.STAT.pathway <= 0)) +
   geom_point(aes(umapharmony_1, umapharmony_2, color = JAK.STAT.pathway), 
-             size = pt.size, alpha = pt.alpha, 
+             size = pt.size2, alpha = pt.alpha, 
              data = mutate(plot_data, JAK.STAT.pathway = ifelse(JAK.STAT.pathway > 4, 4, JAK.STAT.pathway))) +
   scale_color_gradientn(colours = viridis(9), breaks = c(0, 2, 4), limits = c(min(plot_data$JAK.STAT.pathway), 4), labels = c(0, 2, "≥4")) +
   guides(color = F) + 
   labs(title = "")
 
-
-```
-
-```{r chunk_062, fig.width=12, fig.height=8}
-
-
 ```
 
 ```{r chunk_063, fig.width=20, fig.height=5}
 
-cluster_comp <- plot_data %>% 
+source("_src/comp_plot.R")
+
+cluster_comp <- plot_data %>%
   mutate(sort_short_x = str_replace_all(sort_short, "U", "CD45-")) %>% 
-  group_by(cluster_label, consensus_signature, sample, sort_short_x, tumor_supersite, therapy) %>% 
-  tally %>% 
-  group_by(consensus_signature, sample, sort_short_x, tumor_supersite, therapy) %>% 
-  mutate(nrel = n/sum(n)*100) %>% 
-  ungroup %>% 
-  arrange(cluster_label != "Secretory.cell.6", -nrel) %>% 
-  mutate(sample = ordered(sample, levels = unique(sample))) %>% 
+  mutate(sample_id = sample) %>% 
+  group_by(cluster_label, consensus_signature, sample_id, sort_short_x, tumor_supersite, therapy) %>%
+  tally %>%
+  group_by(consensus_signature, sample_id, sort_short_x, tumor_supersite, therapy) %>%
+  mutate(nrel = n/sum(n)*100) %>%
+  ungroup %>%
   mutate(cell_type = "Ovarian.cancer.cell")
 
-cluster_comp_rank <- cluster_comp %>% 
-  distinct(sample, .keep_all = T) %>% 
-  filter(sort_short_x == "CD45-") %>% 
-  mutate(sample = ordered(sample, levels = unique(as.character(sample)))) %>% 
-  mutate(sample_rank = scales::rescale(as.numeric(sample), c(-1, 1)))
+plist <- default_comp_grid_list(filter(cluster_comp, sort_short_x == "CD45-"),
+                                cluster_label, "Cancer.cell.3", vec_plot = F, super_type = "Ovarian.cancer.cell")
 
-p1 <- comp_plot_wrapper(cluster_comp, "CD45-", "n", x = "sample", fill = "cluster_label", super_type = "Ovarian.cancer.cell")
-p2 <- comp_plot_wrapper(cluster_comp, "CD45-", "nrel", x = "sample", fill = "cluster_label", super_type = "Ovarian.cancer.cell")
-p3 <- comp_label_boxplot(cluster_comp_rank, x = "consensus_signature", y = "sample_rank", clr = "consensus_signature", cts = "CD45-")
-
-
-pcomp_grid_p_full <- plot_grid(p1, p2, p3,
+pcomp_grid_p_full <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox1,
                                ncol = 1, align = "v",
                                rel_heights = c(0.25, 0.25, 0.4))
-
-
-```
-
-```{r chunk_065, fig.width=20, fig.height=5}
-
-# cluster_comp <- plot_data %>% 
-#   group_by(cluster_label, consensus_signature) %>% 
-#   tally %>% 
-#   group_by(consensus_signature) %>% 
-#   mutate(total_cs = sum(n)) %>% 
-#   group_by(cluster_label) %>% 
-#   # filter(total_cs > 10000) %>% 
-#   mutate(total_cl = sum(n),
-#          nnorm = n/total_cs,
-#          nrel = n/sum(n),
-#          nrelnorm = nnorm/sum(nnorm)) %>% 
-#   gather(key, value, -cluster_label, -consensus_signature, -total_cs, -total_cl)
-# 
-# cluster_comp %>% 
-#   filter(key %in% c("nrelnorm"),
-#          total_cl > 10000) %>% 
-#   ggplot() +
-#   geom_bar(aes(cluster_label, value, fill = consensus_signature), 
-#            stat = "identity", position = "dodge") +
-#   facet_wrap(~key, scales = "free_x") + 
-#   scale_fill_manual(values = clrs$consensus_signature) +
-#   theme(axis.ticks.y = element_blank(),
-#         axis.title.x = element_text(),
-#         axis.text.y = element_text(hjust = 1)) +
-#   coord_flip()
 
 ```
 
@@ -286,7 +226,7 @@ cancer_grid <- ggdraw() +
             x = 0, y = 0, width = 0.25, height = 1) +
   draw_plot(add_umap_coord(umap_cluster + guides(color = F)), 
             x = 0.25, y = 0, width = 0.25, height = 1) +
-  draw_plot(pcomp_grid_p_full, 
+  draw_plot(pcomp_grid_p_full,
             x = 0.5, y = 0, width = 0.18, height = 1) +
   draw_plot(add_umap_coord(umap_jak_stat), x = 0.7, y = 0, width = 0.25, height = 1)
 

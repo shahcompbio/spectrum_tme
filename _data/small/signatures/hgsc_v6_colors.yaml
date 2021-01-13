@@ -49,9 +49,9 @@ tumor_supersite:
   UQ: "#009E73" # palette_OkabeIto[5]
   Other: "#b3b3b3"
 tumor_megasite:
-  Adnexa: 19
-  Ascites: 4
-  Other: 21
+  Adnexa: "#33a02c"
+  Ascites: "#b3b3b3"
+  Other: "#ff7f00"
 therapy:
   post-Rx: "#ff0000"
   pre-Rx: "#4682b4"
@@ -158,21 +158,17 @@ cluster_label:
     Cycling.CAF: "#FF8F00"
     Pericyte: "#009688"
   Ovarian.cancer.cell:
-    Secretory.cell.1: "#f7cbcc"
-    Secretory.cell.1_1: "#fc2d9b"
-    Secretory.cell.2: "#aa1700"
-    Secretory.cell.2_1: "#ec999a"
-    Secretory.cell.3: "#fc2d9b"
-    Secretory.cell.4: "#ec999a"
-    Secretory.cell.5: "#ff1512"
-    Secretory.cell.6: "#f23512"
-    Endometrial.cell: "#3a0742"
-    Ciliated.cell.1: "#0370b2"
-    Ciliated.cell.1_1: "#55b4e7"
-    Ciliated.cell.2: "#55b4e7"
-    Cycling.cancer.cell.1: "#d6ed61"
-    Cycling.cancer.cell.1_1: "#61c23e"
-    Cycling.cancer.cell.2: "#91a865"
+    Cancer.cell.1: "#ab1500"
+    Cancer.cell.2: "#ff2500"
+    Cancer.cell.3: "#ff2e99"
+    Cancer.cell.4: "#ccdac0"
+    Cancer.cell.5: "#64b796"
+    Cancer.cell.6: "#316600"
+    Cycling.cancer.cell.1: "#ff9803"
+    Cycling.cancer.cell.2: "#ffc98d"
+    Ciliated.cell.1: "#03c9fc"
+    Ciliated.cell.2: "#c3c4e0"
+    Ciliated.cell.3: "#0272b1"
 expression_module:
   CD8.T.Dysfunctional: "#8BC34A"
   CD8.T.Double.positive: "grey30"

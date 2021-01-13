@@ -52,7 +52,7 @@ names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 ## load data --------------------------------------
 
 ## load cohort embeddings
-seu_tbl <- read_tsv("/work/shah/uhlitzf/da/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs_prepost/cells.tsv") %>% 
+seu_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs_pre/cells.tsv") %>% 
   mutate(cell_type = ifelse(cell_type == "Monocyte", "Myeloid.cell", cell_type)) %>% 
   mutate(cell_type = ifelse(cell_type == "Ovarian.cancer.cell", "Ov.cancer.cell", cell_type))
 
@@ -79,9 +79,9 @@ seu_tbl_full <- seu_tbl %>%
 
 ```
 
-## cell type compositions per site and signature
+# cell type compositions scRNA {.tabset}
 
-```{r chunk_080, fig.width=8, fig.height=4}
+```{r chunk_040, fig.width=8, fig.height=4}
 
 source("_src/comp_plot.R")
 # rank_by()
@@ -99,25 +99,10 @@ comp_tbl_sample <- seu_tbl_full %>%
          label_mutsig = "Signature") %>%
   mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite)))) %>%
   mutate(sample_id = paste(tumor_subsite, patient_id_short, therapy, sort_short_x)) %>%
-  ungroup
-
-g1 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
-                        cell_type, "T cell")
-g2 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
-                        cell_type, "B cell")
-g3 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
-                        cell_type, "Plasma cell")
-g4 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
-                        cell_type, "Dendritic cell")
-g5 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
-                        cell_type, "Myeloid cell")
-
-g6 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45-"), 
-                        cell_type, "Ov cancer cell")
-g7 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45-"), 
-                        cell_type, "Endothelial cell")
-g8 <- default_comp_grid(filter(comp_tbl_sample, sort_short_x == "CD45-"), 
-                        cell_type, "Fibroblast")
+  group_by(sample_id) %>% 
+  mutate(ntotal = sum(n)) %>% 
+  filter(ntotal > 0) %>% 
+  ungroup()
 
 
 comp_tbl_consOV <- seu_tbl_full %>%
@@ -134,203 +119,206 @@ comp_tbl_consOV <- seu_tbl_full %>%
   ungroup
 
 
+# 
+# g9 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
+#                         consensusOV, "Immunoreactive")
+# g10 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
+#                          consensusOV, "Mesenchymal")
+# g11 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
+#                          consensusOV, "Differentiated")
+# g12 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
+#                          consensusOV, "Proliferative")
+# 
+# g13 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
+#                          consensusOV, "Immunoreactive")
+# g14 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
+#                          consensusOV, "Mesenchymal")
+# g15 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
+#                          consensusOV, "Differentiated")
+# g16 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
+#                          consensusOV, "Proliferative")
 
-g9 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
-                        consensusOV, "Immunoreactive")
-g10 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
-                         consensusOV, "Mesenchymal")
-g11 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
-                         consensusOV, "Differentiated")
-g12 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45-"),
-                         consensusOV, "Proliferative")
-
-g13 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
-                         consensusOV, "Immunoreactive")
-g14 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
-                         consensusOV, "Mesenchymal")
-g15 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
-                         consensusOV, "Differentiated")
-g16 <- default_comp_grid(filter(comp_tbl_consOV, sort_short_x == "CD45+"),
-                         consensusOV, "Proliferative")
-
-pdf("_fig/002_cohort/002_comp_full.pdf", width = 4, height = 12)
-g1;g2;g3;g4;g5;g6;g7;g8;g9;g10;g11;g12;g13;g14;g15;g16
-dev.off()
-
-```
-
-
-```{r chunk_090, fig.width=12, fig.height=8}
-
-
+# pdf("_fig/002_cohort/002_comp_full.pdf", width = 3.5, height = 12)
+# g1;g2;g3;g4;g5;g6;g7;g8;g9;g10;g11;g12;g13;g14;g15;g16
+# dev.off()
 
 ```
 
+## Site {.tabset}
 
+```{r chunk_050, fig.width=3.5, fig.height=12, results="asis"}
 
-```{r chunk_100, fig.width=3, fig.height=6}
-
-remove_xaxis <- theme(axis.title.x = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.ticks.x = element_blank(),
-                      axis.line.x = element_blank())
-
-remove_guides <- guides(color = F, fill = F, shape = F, alpha = F)
-
-pcomp1 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45+", "n", x = "sample_id_T.cell", facet = F)
-pcomp2 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45+", "nrel", x = "sample_id_T.cell", facet = F)
-
-pcomp_grid_p <- plot_grid(pcomp1, pcomp2,
-                          comp_label_boxplot(x = "tumor_supersite", y = "rank_T.cell", facet = F, cts = "CD45+", ct = "T cell", pvals = T) + remove_xaxis,
-                          vector_plot_cd45p + remove_guides,
-                          ncol = 1, align = "v",
-                          rel_heights = c(0.15, 0.15, 0.25, 0.45))
-
-ggsave("_fig/002_cohort/002_cd45p_sorted_comp.pdf", pcomp_grid_p, width = 3, height = 6)
-
-pcomp1 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45-", "n", x = "sample_id_Ovarian.cancer.cell", facet = F)
-pcomp2 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45-", "nrel", x = "sample_id_Ovarian.cancer.cell", facet = F)
-
-pcomp_grid_n <- plot_grid(pcomp1, pcomp2,
-                          comp_label_boxplot(x = "tumor_supersite", y = "rank_Ovarian.cancer.cell", facet = F, cts = "CD45-", ct = "Ov cancer cell") + remove_xaxis,
-                          vector_plot_cd45n + remove_guides,
-                          ncol = 1, align = "v",
-                          rel_heights = c(0.15, 0.15, 0.25, 0.45))
-
-ggsave("_fig/002_cohort/002_cd45n_sorted_comp.pdf", pcomp_grid_n, width = 3, height = 6)
-
-```
-
-```{r chunk_102, fig.width=3, fig.height=5}
-
-pcomp1 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45+", "n", x = "sample_id_T.cell", facet = F)
-pcomp2 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45+", "nrel", x = "sample_id_T.cell", facet = F)
-
-pcomp_grid_p_full <- plot_grid(pcomp1, pcomp2,
-                          comp_label_boxplot(x = "tumor_supersite", y = "rank_T.cell", facet = F, cts = "CD45+", ct = "T cell", pvals = T) + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.title.x = element_blank()),
-                          comp_label_boxplot(x = "consensus_signature", clr = "consensus_signature", y = "rank_T.cell", facet = F, cts = "CD45+", ct = "T cell", pvals = F, exclude_ascites = T),
-                          ncol = 1, align = "v",
-                          rel_heights = c(0.17, 0.17, 0.28, 0.28))
-
-ggsave("_fig/002_cohort/002_cd45p_sorted_comp_full.pdf", pcomp_grid_p_full, width = 3, height = 5)
-
-pcomp1 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45-", "n", x = "sample_id_Ovarian.cancer.cell", facet = F)
-pcomp2 <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45-", "nrel", x = "sample_id_Ovarian.cancer.cell", facet = F)
-
-pcomp_grid_n_full <- plot_grid(pcomp1, pcomp2,
-                          comp_label_boxplot(x = "tumor_supersite", y = "rank_Ovarian.cancer.cell", facet = F, cts = "CD45-", ct = "Ov cancer cell") + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.title.x = element_blank()),
-                          comp_label_boxplot(x = "consensus_signature", clr = "consensus_signature", y = "rank_Ovarian.cancer.cell", facet = F, cts = "CD45-", ct = "Ov cancer cell", exclude_ascites = T),
-                          ncol = 1, align = "v",
-                          rel_heights = c(0.17, 0.17, 0.28, 0.28))
-
-ggsave("_fig/002_cohort/002_cd45n_sorted_comp_full.pdf", pcomp_grid_n_full, width = 3, height = 5)
-
-
-```
-
-```{r chunk_103, fig.width=3, fig.height=4}
-
-## per patient composition plots
-
-pcomp1p_cell_n <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45+", "n", x = "sample_id_T.cell", facet = "patient_id_short") + theme(strip.text = element_text(angle = 90))
-pcomp2p_cell_nrel <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45+", "nrel", x = "sample_id_T.cell", facet = "patient_id_short") + labs(y = "% cells\n(cell type)")
-pcomp3p_consOV <- comp_plot_wrapper(comp_tbl_consOV, "CD45+", "nrel", fill = "consensusOV", x = "sample_id_T.cell", facet = "patient_id_short", exclude_ascites = F) + labs(y = "% cells\n(TCGA)")
-
-pcompxp_label_site <- comp_label(x = "sample_id_T.cell", y = "label_supersite", fill = "tumor_supersite", cts = "CD45+", facet = "patient_id_short")
-pcompxp_label_mutsig <- comp_label(x = "sample_id_T.cell", y = "label_mutsig", fill = "consensus_signature", cts = "CD45+", facet = "patient_id_short")
-
-pcomp1n_cell_n <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45-", "n", x = "sample_id_Ovarian.cancer.cell", facet = "patient_id_short") + theme(strip.text = element_text(angle = 90))
-pcomp2n_cell_nrel <- comp_plot_wrapper(comp_tbl_sample_sort, "CD45-", "nrel", x = "sample_id_Ovarian.cancer.cell", facet = "patient_id_short") + labs(y = "% cells\n(cell type)")
-pcomp3n_consOV <- comp_plot_wrapper(comp_tbl_consOV, "CD45-", "nrel", fill = "consensusOV", x = "sample_id_Ovarian.cancer.cell", facet = "patient_id_short", exclude_ascites = F) + labs(y = "% cells\n(TCGA)")
-
-pcompxn_label_site <- comp_label(x = "sample_id_Ovarian.cancer.cell", y = "label_supersite", fill = "tumor_supersite", cts = "CD45-", facet = "patient_id_short")
-pcompxn_label_mutsig <- comp_label(x = "sample_id_Ovarian.cancer.cell", y = "label_mutsig", fill = "consensus_signature", cts = "CD45-", facet = "patient_id_short")
-
-comp_grid_per_patient_p <- plot_grid(
-  pcomp1p_cell_n,
-  pcomp2p_cell_nrel,
-  pcomp3p_consOV,
-  pcompxp_label_site,
-  pcompxp_label_mutsig,
-  ncol = 1, align = "v", axis = "x", rel_heights = c(0.3, 0.24, 0.24, 0.06, 0.06)
-)
-
-comp_grid_per_patient_n <- plot_grid(
-  pcomp1n_cell_n,
-  pcomp2n_cell_nrel,
-  pcomp3n_consOV,
-  pcompxn_label_site,
-  pcompxn_label_mutsig,
-  ncol = 1, align = "v", axis = "x", rel_heights = c(0.3, 0.24, 0.24, 0.06, 0.06)
-)
+cell_types_immune <- str_replace_all(names(cell_type_super_lookup[cell_type_super_lookup=="Immune"]), "\\.", " ")
+cell_types_stromal <- str_replace_all(names(cell_type_super_lookup[cell_type_super_lookup=="Stromal"]), "\\.", " ") %>% 
+  str_replace_all("Ovarian", "Ov")
   
-```
+for(i in 1:length(cell_types_immune)){
+  
+  cat('### ', cell_types_immune[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
+                                  cell_type, cell_types_immune[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox2, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
 
+for(i in 1:length(cell_types_stromal)){
+  
+  cat('### ', cell_types_stromal[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_sample, sort_short_x == "CD45-"), 
+                                  cell_type, cell_types_stromal[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox2, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
 
-```{r chunk_106, fig.width=3, fig.height=5}
-
-## OLD CODE?
-
-# matched_samples <- comp_tbl_sample_sort %>%
-#   mutate(sample_id_x = str_remove_all(sample_id, " CD45-| CD45\\+")) %>%
-#   distinct(sample_id_x, sample_id) %>%
-#   group_by(sample_id_x) %>%
-#   tally %>%
-#   filter(n==2) %>%
-#   pull(sample_id_x)
-# 
-# comp_rank_scatter_tbl <- comp_tbl_sample_sort %>%
-#   mutate(sample_id_x = str_remove_all(sample_id, " CD45-| CD45\\+")) %>%
-#   filter(sample_id_x %in% matched_samples,
-#          (cell_type == "T cell" & sort_short_x == "CD45+") | (cell_type == "Ovarian cancer cell" & sort_short_x == "CD45-")) %>%
-#   mutate(rank = ifelse(sort_short_x == "CD45-", rank_Ovarian.cancer.cell, rank_T.cell)) %>%
-#   distinct(rank, sample_id_x, sort_short_x, tumor_supersite) %>%
-#   spread(sort_short_x, rank) %>%
-#   na.omit()
-# 
-# ggplot(comp_rank_scatter_tbl) +
-#   geom_point(aes(`CD45-`, `CD45+`, color = tumor_supersite)) +
-#   scale_color_manual(values = clrs$tumor_supersite)
-
-```
-
-
-
-## summary stats grid
-
-```{r chunk_130, fig.width=6, fig.height=10}
-
-# right_grid_full <- ggdraw() +
-#   draw_plot(tcga_heat + guides(fill = F), x = -0.05, y = 0.58, width = 0.65, height = 0.4) +
-#   draw_grob(tcga_heat_legend, x = 0.05, y = 0.56, width = 0.2, height = 0.2) +
-#   draw_plot(mixing_plot_cell_type, x = 0.56, y = 0.58, width = 0.45, height = 0.4) +
-#   draw_plot(pcomp_grid_p_full, x = 0, y = 0, width = 0.5, height = 0.55) +
-#   draw_plot(pcomp_grid_n_full, x = 0.5, y = 0, width = 0.5, height = 0.55)
-#   
-# right_grid_full
-# 
-# ggsave("_fig/001x_right_grid_full.png", right_grid_full, width = 6, height = 10)
-# ggsave("_fig/001x_right_grid_full.pdf", right_grid_full, width = 6, height = 10)
+}
 
 ```
 
-```{r chunk_135, fig.width=6, fig.height=9}
+## Signature {.tabset}
 
-# right_grid <- ggdraw() +
-#   draw_plot(tcga_heat + guides(fill = F), x = -0.05, y = 0.65, width = 0.65, height = 0.35) +
-#   draw_grob(tcga_heat_legend, x = 0.05, y = 0.6, width = 0.2, height = 0.2) +
-#   draw_plot(mixing_plot_cell_type, x = 0.56, y = 0.65, width = 0.45, height = 0.35) +
-#   draw_plot(pcomp_grid_p, x = 0, y = 0, width = 0.5, height = 0.6) +
-#   draw_plot(pcomp_grid_n, x = 0.5, y = 0, width = 0.5, height = 0.6)
-#   
-# right_grid
-# 
-# ggsave("_fig/001x_right_grid.png", right_grid, width = 6, height = 10)
-# ggsave("_fig/001x_right_grid.pdf", right_grid, width = 6, height = 10)
+```{r chunk_060, fig.width=3.5, fig.height=12, results="asis"}
+
+cell_types_immune <- str_replace_all(names(cell_type_super_lookup[cell_type_super_lookup=="Immune"]), "\\.", " ")
+cell_types_stromal <- str_replace_all(names(cell_type_super_lookup[cell_type_super_lookup=="Stromal"]), "\\.", " ") %>% 
+  str_replace_all("Ovarian", "Ov")
+  
+for(i in 1:length(cell_types_immune)){
+  
+  cat('### ', cell_types_immune[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
+                                  cell_type, cell_types_immune[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox1, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
+
+for(i in 1:length(cell_types_stromal)){
+  
+  cat('### ', cell_types_stromal[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_sample, sort_short_x == "CD45-"), 
+                                  cell_type, cell_types_stromal[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox1, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
+
+}
 
 ```
 
-## mpIF composition
+# TCGA compositions scRNA {.tabset}
+
+## Site {.tabset}
+
+```{r chunk_070, fig.width=3.5, fig.height=12, results="asis"}
+
+tcga_subtypes <- as.character(unique(consOV_tbl$consensusOV))
+
+for(i in 1:length(tcga_subtypes)){
+  
+  cat('### ', tcga_subtypes[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_consOV, sort_short_x == "CD45+"), 
+                                  consensusOV, tcga_subtypes[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox2, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
+
+for(i in 1:length(tcga_subtypes)){
+  
+  cat('### ', tcga_subtypes[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_consOV, sort_short_x == "CD45-"), 
+                                  consensusOV, tcga_subtypes[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox2, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
+
+}
+
+```
+
+## Signature {.tabset}
+
+```{r chunk_080, fig.width=3.5, fig.height=12, results="asis"}
+
+tcga_subtypes <- as.character(unique(consOV_tbl$consensusOV))
+
+for(i in 1:length(tcga_subtypes)){
+  
+  cat('### ', tcga_subtypes[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_consOV, sort_short_x == "CD45+"), 
+                                  consensusOV, tcga_subtypes[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox1, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
+
+for(i in 1:length(tcga_subtypes)){
+  
+  cat('### ', tcga_subtypes[i],' \n')
+  
+  plist <- default_comp_grid_list(filter(comp_tbl_consOV, sort_short_x == "CD45-"), 
+                                  consensusOV, tcga_subtypes[i])
+  
+  p <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox1, plist$pvec, 
+                 ncol = 1, align = "v",
+                 rel_heights = c(0.13, 0.13, 0.13, 0.61))
+  
+  print(p)
+  
+  cat(' \n \n')
+
+}
+
+```
+
+# mpIF composition
 
 ```{r chunk_140, fig.width=6, fig.height=3}
 
@@ -548,193 +536,122 @@ mpif_cell_state_n_imm_cd8_slide <- mpif_cell_state_n_slide %>%
 
 ```{r chunk_150, fig.width=6, fig.height=3}
 
-prim_ranks_cd45p_mpif <- filter(mpif_cell_state_n_imm_slide) %>%
-  filter((tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
-  mutate(rank = rank_T.cell) %>%
-  prim_ranks_wrapper("Adnexa")
-
-meta_ranks_cd45p_mpif <- filter(mpif_cell_state_n_imm_slide) %>%
-  filter(!(tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
-  mutate(rank = rank_T.cell) %>%
-  prim_ranks_wrapper("Non-adnexa")
-
-median_rank_tbl_cd45p_mpif <- bind_rows(distinct(prim_ranks_cd45p_mpif, median_rank, .keep_all = T),
-                                        distinct(meta_ranks_cd45p_mpif, median_rank, .keep_all = T)) %>%
-  median_rank_wrapper
-
-rank_tbl_cd45p_mpif <- bind_rows(prim_ranks_cd45p_mpif, meta_ranks_cd45p_mpif) %>%
-  mutate(prim_meta = ifelse(tumor_supersite == "Ascites", "Ascites", prim_meta),
-         patient_id_short = ordered(patient_id_short, levels = levels(median_rank_tbl_cd45p_mpif$patient_id_short)))
-
-vector_patient_lvls_cd45p_mpif <- levels(rank_tbl_cd45p$patient_id_short)
-vector_patient_lvls_cd45p_mpif[as.logical(1:length(vector_patient_lvls_cd45p_mpif) %% 2)] <- paste0(vector_patient_lvls_cd45p_mpif[as.logical(1:length(vector_patient_lvls_cd45p_mpif) %% 2)], "       ")
-
-vector_rank_list_cd45p_mpif <- list(rank_tbl = rank_tbl_cd45p_mpif,
-                               median_rank_tbl = median_rank_tbl_cd45p_mpif,
-                               vector_patient_lvls = vector_patient_lvls_cd45p_mpif)
-
-vector_plot_cd45p_mpif <- vector_patient_plot_wrapper(vector_rank_list_cd45p_mpif, c("#ff7f00", "#33a02c"))
-
-
-## tumor compartment vectors
-prim_ranks_tumor_mpif <- filter(mpif_cell_state_n_imm_slide_tumor, sort_short_x == "Tumor", therapy == "pre-Rx", compartment == "Tumor") %>%
-  filter((tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
-  mutate(rank = rank_T.cell) %>%
-  prim_ranks_wrapper("Adnexa")
-
-meta_ranks_tumor_mpif <- filter(mpif_cell_state_n_imm_slide_tumor, sort_short_x == "Tumor", therapy == "pre-Rx", compartment == "Tumor") %>%
-  filter(!(tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
-  mutate(rank = rank_T.cell) %>%
-  prim_ranks_wrapper("Non-adnexa")
-
-median_rank_tbl_tumor_mpif <- bind_rows(distinct(prim_ranks_tumor_mpif, median_rank, .keep_all = T),
-                                        distinct(meta_ranks_tumor_mpif, median_rank, .keep_all = T)) %>%
-  median_rank_wrapper
-
-rank_tbl_tumor_mpif <- bind_rows(prim_ranks_tumor_mpif, meta_ranks_tumor_mpif) %>%
-  mutate(prim_meta = ifelse(tumor_supersite == "Ascites", "Ascites", prim_meta),
-         patient_id_short = ordered(patient_id_short, levels = levels(median_rank_tbl_tumor_mpif$patient_id_short)))
-
-vector_patient_lvls_tumor_mpif <- levels(rank_tbl_cd45p$patient_id_short)
-vector_patient_lvls_tumor_mpif[as.logical(1:length(vector_patient_lvls_tumor_mpif) %% 2)] <- paste0(vector_patient_lvls_tumor_mpif[as.logical(1:length(vector_patient_lvls_tumor_mpif) %% 2)], "       ")
-
-vector_rank_list_tumor_mpif <- list(rank_tbl = rank_tbl_tumor_mpif,
-                               median_rank_tbl = median_rank_tbl_tumor_mpif,
-                               vector_patient_lvls = vector_patient_lvls_tumor_mpif)
-
-vector_plot_tumor_mpif <- vector_patient_plot_wrapper(vector_rank_list_tumor_mpif, c("#ff7f00", "#33a02c"))
-
-
-## stroma compartment vectors
-prim_ranks_stroma_mpif <- filter(mpif_cell_state_n_imm_slide_stroma, sort_short_x == "Stroma", therapy == "pre-Rx", compartment == "Stroma") %>%
-  filter((tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
-  mutate(rank = rank_T.cell) %>%
-  prim_ranks_wrapper("Adnexa")
-
-meta_ranks_stroma_mpif <- filter(mpif_cell_state_n_imm_slide_stroma, sort_short_x == "Stroma", therapy == "pre-Rx", compartment == "Stroma") %>%
-  filter(!(tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
-  mutate(rank = rank_T.cell) %>%
-  prim_ranks_wrapper("Non-adnexa")
-
-median_rank_tbl_stroma_mpif <- bind_rows(distinct(prim_ranks_stroma_mpif, median_rank, .keep_all = T),
-                                        distinct(meta_ranks_stroma_mpif, median_rank, .keep_all = T)) %>%
-  median_rank_wrapper
-
-rank_tbl_stroma_mpif <- bind_rows(prim_ranks_stroma_mpif, meta_ranks_stroma_mpif) %>%
-  mutate(prim_meta = ifelse(tumor_supersite == "Ascites", "Ascites", prim_meta),
-         patient_id_short = ordered(patient_id_short, levels = levels(median_rank_tbl_stroma_mpif$patient_id_short)))
-
-vector_patient_lvls_stroma_mpif <- levels(rank_tbl_cd45p$patient_id_short)
-vector_patient_lvls_stroma_mpif[as.logical(1:length(vector_patient_lvls_stroma_mpif) %% 2)] <- paste0(vector_patient_lvls_stroma_mpif[as.logical(1:length(vector_patient_lvls_stroma_mpif) %% 2)], "       ")
-
-vector_rank_list_stroma_mpif <- list(rank_tbl = rank_tbl_stroma_mpif,
-                               median_rank_tbl = median_rank_tbl_stroma_mpif,
-                               vector_patient_lvls = vector_patient_lvls_stroma_mpif)
-
-vector_plot_stroma_mpif <- vector_patient_plot_wrapper(vector_rank_list_stroma_mpif, c("#ff7f00", "#33a02c"))
+# prim_ranks_cd45p_mpif <- filter(mpif_cell_state_n_imm_slide) %>%
+#   filter((tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
+#   mutate(rank = rank_T.cell) %>%
+#   prim_ranks_wrapper("Adnexa")
+# 
+# meta_ranks_cd45p_mpif <- filter(mpif_cell_state_n_imm_slide) %>%
+#   filter(!(tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
+#   mutate(rank = rank_T.cell) %>%
+#   prim_ranks_wrapper("Non-adnexa")
+# 
+# median_rank_tbl_cd45p_mpif <- bind_rows(distinct(prim_ranks_cd45p_mpif, median_rank, .keep_all = T),
+#                                         distinct(meta_ranks_cd45p_mpif, median_rank, .keep_all = T)) %>%
+#   median_rank_wrapper
+# 
+# rank_tbl_cd45p_mpif <- bind_rows(prim_ranks_cd45p_mpif, meta_ranks_cd45p_mpif) %>%
+#   mutate(prim_meta = ifelse(tumor_supersite == "Ascites", "Ascites", prim_meta),
+#          patient_id_short = ordered(patient_id_short, levels = levels(median_rank_tbl_cd45p_mpif$patient_id_short)))
+# 
+# vector_patient_lvls_cd45p_mpif <- levels(rank_tbl_cd45p$patient_id_short)
+# vector_patient_lvls_cd45p_mpif[as.logical(1:length(vector_patient_lvls_cd45p_mpif) %% 2)] <- paste0(vector_patient_lvls_cd45p_mpif[as.logical(1:length(vector_patient_lvls_cd45p_mpif) %% 2)], "       ")
+# 
+# vector_rank_list_cd45p_mpif <- list(rank_tbl = rank_tbl_cd45p_mpif,
+#                                median_rank_tbl = median_rank_tbl_cd45p_mpif,
+#                                vector_patient_lvls = vector_patient_lvls_cd45p_mpif)
+# 
+# vector_plot_cd45p_mpif <- vector_patient_plot_wrapper(vector_rank_list_cd45p_mpif, c("#ff7f00", "#33a02c"))
+# 
+# 
+# ## tumor compartment vectors
+# prim_ranks_tumor_mpif <- filter(mpif_cell_state_n_imm_slide_tumor, sort_short_x == "Tumor", therapy == "pre-Rx", compartment == "Tumor") %>%
+#   filter((tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
+#   mutate(rank = rank_T.cell) %>%
+#   prim_ranks_wrapper("Adnexa")
+# 
+# meta_ranks_tumor_mpif <- filter(mpif_cell_state_n_imm_slide_tumor, sort_short_x == "Tumor", therapy == "pre-Rx", compartment == "Tumor") %>%
+#   filter(!(tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
+#   mutate(rank = rank_T.cell) %>%
+#   prim_ranks_wrapper("Non-adnexa")
+# 
+# median_rank_tbl_tumor_mpif <- bind_rows(distinct(prim_ranks_tumor_mpif, median_rank, .keep_all = T),
+#                                         distinct(meta_ranks_tumor_mpif, median_rank, .keep_all = T)) %>%
+#   median_rank_wrapper
+# 
+# rank_tbl_tumor_mpif <- bind_rows(prim_ranks_tumor_mpif, meta_ranks_tumor_mpif) %>%
+#   mutate(prim_meta = ifelse(tumor_supersite == "Ascites", "Ascites", prim_meta),
+#          patient_id_short = ordered(patient_id_short, levels = levels(median_rank_tbl_tumor_mpif$patient_id_short)))
+# 
+# vector_patient_lvls_tumor_mpif <- levels(rank_tbl_cd45p$patient_id_short)
+# vector_patient_lvls_tumor_mpif[as.logical(1:length(vector_patient_lvls_tumor_mpif) %% 2)] <- paste0(vector_patient_lvls_tumor_mpif[as.logical(1:length(vector_patient_lvls_tumor_mpif) %% 2)], "       ")
+# 
+# vector_rank_list_tumor_mpif <- list(rank_tbl = rank_tbl_tumor_mpif,
+#                                median_rank_tbl = median_rank_tbl_tumor_mpif,
+#                                vector_patient_lvls = vector_patient_lvls_tumor_mpif)
+# 
+# vector_plot_tumor_mpif <- vector_patient_plot_wrapper(vector_rank_list_tumor_mpif, c("#ff7f00", "#33a02c"))
+# 
+# 
+# ## stroma compartment vectors
+# prim_ranks_stroma_mpif <- filter(mpif_cell_state_n_imm_slide_stroma, sort_short_x == "Stroma", therapy == "pre-Rx", compartment == "Stroma") %>%
+#   filter((tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
+#   mutate(rank = rank_T.cell) %>%
+#   prim_ranks_wrapper("Adnexa")
+# 
+# meta_ranks_stroma_mpif <- filter(mpif_cell_state_n_imm_slide_stroma, sort_short_x == "Stroma", therapy == "pre-Rx", compartment == "Stroma") %>%
+#   filter(!(tumor_supersite %in% c("Adnexa")), cell_type == "CD8+", cell_state == "CD8+TOX-PD1-") %>%
+#   mutate(rank = rank_T.cell) %>%
+#   prim_ranks_wrapper("Non-adnexa")
+# 
+# median_rank_tbl_stroma_mpif <- bind_rows(distinct(prim_ranks_stroma_mpif, median_rank, .keep_all = T),
+#                                         distinct(meta_ranks_stroma_mpif, median_rank, .keep_all = T)) %>%
+#   median_rank_wrapper
+# 
+# rank_tbl_stroma_mpif <- bind_rows(prim_ranks_stroma_mpif, meta_ranks_stroma_mpif) %>%
+#   mutate(prim_meta = ifelse(tumor_supersite == "Ascites", "Ascites", prim_meta),
+#          patient_id_short = ordered(patient_id_short, levels = levels(median_rank_tbl_stroma_mpif$patient_id_short)))
+# 
+# vector_patient_lvls_stroma_mpif <- levels(rank_tbl_cd45p$patient_id_short)
+# vector_patient_lvls_stroma_mpif[as.logical(1:length(vector_patient_lvls_stroma_mpif) %% 2)] <- paste0(vector_patient_lvls_stroma_mpif[as.logical(1:length(vector_patient_lvls_stroma_mpif) %% 2)], "       ")
+# 
+# vector_rank_list_stroma_mpif <- list(rank_tbl = rank_tbl_stroma_mpif,
+#                                median_rank_tbl = median_rank_tbl_stroma_mpif,
+#                                vector_patient_lvls = vector_patient_lvls_stroma_mpif)
+# 
+# vector_plot_stroma_mpif <- vector_patient_plot_wrapper(vector_rank_list_stroma_mpif, c("#ff7f00", "#33a02c"))
 
 
 ```
 
 ```{r chunk_160, fig.width=3, fig.height=6}
 
-pcomp1 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide, "mpIF", "n", x = "sample_cd45p", facet = F, fill = "cell_state") +
-  scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 250000, 500000),
-                       limits = c(0, 500000),
-                       labels = c("", "250000", "500000")) +
-    expand_limits(y = c(0, 500000))
-
-pcomp2 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide, "mpIF", "nrel", x = "sample_cd45p", facet = F, fill = "cell_state") +
-  scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 0.5, 1),
-                       limits = c(0, 1),
-                       labels = c("0", "50", "100")) +
-  expand_limits(y = c(0, 1))
-
-
-pcomp_grid_p_mpif <- plot_grid(pcomp1, pcomp2,
-                               comp_label_boxplot(filter(mpif_cell_state_n_imm_slide, cell_state == "CD8+TOX-PD1-"), x = "tumor_supersite", y = "rank_T.cell", facet = F, cts = "mpIF", ct = "CD8+", pvals = F) + remove_xaxis,
-                               vector_plot_cd45p + remove_guides,
-                               ncol = 1, align = "v",
-                               rel_heights = c(0.15, 0.15, 0.25, 0.45))
-
-ggsave("_fig/002_cohort/002_sorted_comp_mpif.pdf", pcomp_grid_p_mpif, width = 3, height = 6)
-
-
-```
-
-```{r chunk_161, fig.width=3, fig.height=6}
-
-pcomp1 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide_tumor, "Tumor", "n", x = "sample_cd45p", facet = F, fill = "cell_state") +
-  scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 150000, 300000),
-                       limits = c(0, 300000),
-                       labels = c("", "150000", "300000")) +
-    expand_limits(y = c(0, 300000))
-
-pcomp2 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide_tumor, "Tumor", "nrel", x = "sample_cd45p", facet = F, fill = "cell_state") +
-  scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 0.5, 1),
-                       limits = c(0, 1),
-                       labels = c("0", "50", "100")) +
-  expand_limits(y = c(0, 1))
-
-
-pcomp_grid_p_mpif_tumor <- plot_grid(pcomp1, pcomp2,
-                               comp_label_boxplot(filter(mpif_cell_state_n_imm_slide_tumor, cell_state == "CD8+TOX-PD1-"), x = "tumor_supersite", y = "rank_T.cell", facet = F, cts = "Tumor", ct = "CD8+", pvals = F) + remove_xaxis,
-                               vector_plot_tumor_mpif + remove_guides,
-                               ncol = 1, align = "v",
-                               rel_heights = c(0.15, 0.15, 0.25, 0.45))
-
-ggsave("_fig/002_cohort/002_sorted_comp_mpif_tumor.pdf", pcomp_grid_p_mpif, width = 3, height = 6)
-
+# pcomp1 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide, "mpIF", "n", x = "sample_cd45p", facet = F, fill = "cell_state") +
+#   scale_y_continuous(expand = c(0, 0),
+#                        breaks = c(0, 250000, 500000),
+#                        limits = c(0, 500000),
+#                        labels = c("", "250000", "500000")) +
+#     expand_limits(y = c(0, 500000))
+# 
+# pcomp2 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide, "mpIF", "nrel", x = "sample_cd45p", facet = F, fill = "cell_state") +
+#   scale_y_continuous(expand = c(0, 0),
+#                        breaks = c(0, 0.5, 1),
+#                        limits = c(0, 1),
+#                        labels = c("0", "50", "100")) +
+#   expand_limits(y = c(0, 1))
+# 
+# 
+# pcomp_grid_p_mpif <- plot_grid(pcomp1, pcomp2,
+#                                comp_label_boxplot(filter(mpif_cell_state_n_imm_slide, cell_state == "CD8+TOX-PD1-"), x = "tumor_supersite", y = "rank_T.cell", facet = F, cts = "mpIF", ct = "CD8+", pvals = F) + remove_xaxis,
+#                                vector_plot_cd45p + remove_guides,
+#                                ncol = 1, align = "v",
+#                                rel_heights = c(0.15, 0.15, 0.25, 0.45))
+# 
+# ggsave("_fig/002_cohort/002_sorted_comp_mpif.pdf", pcomp_grid_p_mpif, width = 3, height = 6)
+# 
 
 ```
 
-```{r chunk_162, fig.width=3, fig.height=6}
-
-pcomp1 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide_stroma, "Stroma", "n", x = "sample_cd45p", facet = F, fill = "cell_state") +
-  scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 150000, 300000),
-                       limits = c(0, 300000),
-                       labels = c("", "150000", "300000")) +
-    expand_limits(y = c(0, 300000))
-
-pcomp2 <- comp_plot_wrapper(mpif_cell_state_n_imm_slide_stroma, "Stroma", "nrel", x = "sample_cd45p", facet = F, fill = "cell_state") +
-  scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 0.5, 1),
-                       limits = c(0, 1),
-                       labels = c("0", "50", "100")) +
-  expand_limits(y = c(0, 1))
-
-
-pcomp_grid_p_mpif_stroma <- plot_grid(pcomp1, pcomp2,
-                               comp_label_boxplot(filter(mpif_cell_state_n_imm_slide_stroma, cell_state == "CD8+TOX-PD1-"), x = "tumor_supersite", y = "rank_T.cell", facet = F, cts = "Stroma", ct = "CD8+", pvals = F) + remove_xaxis,
-                               vector_plot_stroma_mpif + remove_guides,
-                               ncol = 1, align = "v",
-                               rel_heights = c(0.15, 0.15, 0.25, 0.45))
-
-ggsave("_fig/002_cohort/002_sorted_comp_mpif_stroma.pdf", pcomp_grid_p_mpif, width = 3, height = 6)
-
-
-```
-
-## summary stats mpif comparison
-
-```{r chunk_165, fig.width=12, fig.height=8}
-
-comp_grid_full <- ggdraw() +
-  draw_plot(pcomp_grid_n, x = 0, y = 0, width = 0.25, height = 1) +
-  draw_plot(pcomp_grid_p, x = 0.25, y = 0, width = 0.25, height = 1) +
-  draw_plot(pcomp_grid_p_mpif_tumor, x = 0.5, y = 0, width = 0.25, height = 1) +
-  draw_plot(pcomp_grid_p_mpif_stroma, x = 0.75, y = 0, width = 0.25, height = 1)
-
-comp_grid_full
-
-ggsave("_fig/002_cohort/002_comp_grid_full.pdf", comp_grid_full, width = 12, height = 8)
-
-```
 
 
 
@@ -742,71 +659,71 @@ ggsave("_fig/002_cohort/002_comp_grid_full.pdf", comp_grid_full, width = 12, hei
 
 ```{r chunk_170, fig.width=6, fig.height=3}
 
-# seu_cohort <- read_rds("/work/shah/isabl_data_lake/analyses/16/52/1652/cohort_merged.rdata")
-#
-# scrna_markers <- as_tibble(cbind(cell_id = colnames(seu_cohort), FetchData(seu_cohort, c("cell_type", "sample", "CD68", "PDCD1", "CD274", "TOX", "CD8A", "CD8B", "KRT8", "KRT19")))) %>%
-#   mutate(CD68_state = ifelse(CD68 > 0, "CD68+", "CD68-"),
-#          CD8_state = ifelse(CD8A > 0 | CD8B > 0, "CD8+", "CD8-"),
-#          panCK_state = ifelse(KRT8 > 0 | KRT19 > 0, "panCK+", "panCK-"),
-#          TOX_state = ifelse(TOX > 0, "TOX+", "TOX-"),
-#          PD1_state = ifelse(PDCD1 > 0, "PD1+", "PD1-"),
-#          PDL1_state = ifelse(CD274 > 0, "PDL1+", "PDL1-"))
-#
-# write_tsv(scrna_markers, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/scrna_mpif_marker_expression.tsv")
-
-scrna_markers <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/scrna_mpif_marker_expression.tsv") %>%
-  filter(!(CD68_state == "CD68+" & CD8_state == "CD8+"),
-         !(CD68_state == "CD68+" & panCK_state == "panCK+"),
-         !(CD8_state == "CD8+" & panCK_state == "panCK+")) %>%
-  mutate(cell_type_sc = ifelse(CD68_state == "CD68+", "CD68+", ifelse(CD8_state == "CD8+", "CD8+", ifelse(panCK_state == "panCK+", "panCK+", "Other"))),
-         cell_state = case_when(
-           cell_type_sc == "CD8+" ~ paste0(CD8_state, TOX_state, PD1_state),
-           cell_type_sc == "CD68+" ~ paste0(CD68_state, PDL1_state),
-           cell_type_sc == "panCK+" ~ paste0(panCK_state, PDL1_state),
-           cell_type_sc == "Unknown" ~ "Unknown",
-           cell_type_sc == "Other" ~ "Other"
-         ))
-
-markers_pos_frac_scrna_celltype <- seu_tbl_full %>%
-  # select(cell_id, sample) %>%
-  select(cell_id, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  left_join(select(scrna_markers, cell_id, cell_type_sc, cell_state), by = "cell_id") %>%
-  na.omit() %>%
-  group_by(sample, cell_type_sc, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  tally %>%
-  group_by(sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  mutate(nrel = n/sum(n)) %>%
-  select(sample, cell_type_sc, n, nrel, everything()) %>%
-  ungroup
-
-markers_pos_frac_scrna_cellstate <- seu_tbl_full %>%
-  # select(cell_id, sample) %>%
-  select(cell_id, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  left_join(select(scrna_markers, cell_id, cell_type_sc, cell_state), by = "cell_id") %>%
-  na.omit() %>%
-  group_by(sample, cell_state, cell_type_sc, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  tally %>%
-  group_by(sample, cell_type_sc, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  mutate(nrel = n/sum(n)) %>%
-  select(sample, cell_type_sc, cell_state, n, nrel, everything()) %>%
-  ungroup
-
-markers_pos_frac_scrna_gene <- seu_tbl_full %>%
-  # select(cell_id, sample) %>%
-  select(cell_id, sample, cell_type, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  left_join(select(scrna_markers, -sample, -cell_type), by = "cell_id") %>%
-  na.omit() %>%
-  select(-contains("state")) %>%
-  mutate(cell_type = str_replace_all(cell_type, "\\.", " ")) %>%
-  gather(gene, value, -cell_id, -sample, -cell_type, -tumor_supersite,
-         -consensus_signature, -patient_id_short, -sort_short_x, -cell_type_sc) %>%
-  mutate(gene_state = value > 0) %>%
-  group_by(gene, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
-  mutate(n = sum(gene_state),
-         nrel = n/length(n)) %>%
-  ungroup %>%
-  distinct(gene, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x, n, nrel) %>%
-  select(sample, gene, n, nrel, everything())
+# # seu_cohort <- read_rds("/work/shah/isabl_data_lake/analyses/16/52/1652/cohort_merged.rdata")
+# #
+# # scrna_markers <- as_tibble(cbind(cell_id = colnames(seu_cohort), FetchData(seu_cohort, c("cell_type", "sample", "CD68", "PDCD1", "CD274", "TOX", "CD8A", "CD8B", "KRT8", "KRT19")))) %>%
+# #   mutate(CD68_state = ifelse(CD68 > 0, "CD68+", "CD68-"),
+# #          CD8_state = ifelse(CD8A > 0 | CD8B > 0, "CD8+", "CD8-"),
+# #          panCK_state = ifelse(KRT8 > 0 | KRT19 > 0, "panCK+", "panCK-"),
+# #          TOX_state = ifelse(TOX > 0, "TOX+", "TOX-"),
+# #          PD1_state = ifelse(PDCD1 > 0, "PD1+", "PD1-"),
+# #          PDL1_state = ifelse(CD274 > 0, "PDL1+", "PDL1-"))
+# #
+# # write_tsv(scrna_markers, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/scrna_mpif_marker_expression.tsv")
+# 
+# scrna_markers <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/scrna_mpif_marker_expression.tsv") %>%
+#   filter(!(CD68_state == "CD68+" & CD8_state == "CD8+"),
+#          !(CD68_state == "CD68+" & panCK_state == "panCK+"),
+#          !(CD8_state == "CD8+" & panCK_state == "panCK+")) %>%
+#   mutate(cell_type_sc = ifelse(CD68_state == "CD68+", "CD68+", ifelse(CD8_state == "CD8+", "CD8+", ifelse(panCK_state == "panCK+", "panCK+", "Other"))),
+#          cell_state = case_when(
+#            cell_type_sc == "CD8+" ~ paste0(CD8_state, TOX_state, PD1_state),
+#            cell_type_sc == "CD68+" ~ paste0(CD68_state, PDL1_state),
+#            cell_type_sc == "panCK+" ~ paste0(panCK_state, PDL1_state),
+#            cell_type_sc == "Unknown" ~ "Unknown",
+#            cell_type_sc == "Other" ~ "Other"
+#          ))
+# 
+# markers_pos_frac_scrna_celltype <- seu_tbl_full %>%
+#   # select(cell_id, sample) %>%
+#   select(cell_id, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   left_join(select(scrna_markers, cell_id, cell_type_sc, cell_state), by = "cell_id") %>%
+#   na.omit() %>%
+#   group_by(sample, cell_type_sc, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   tally %>%
+#   group_by(sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   mutate(nrel = n/sum(n)) %>%
+#   select(sample, cell_type_sc, n, nrel, everything()) %>%
+#   ungroup
+# 
+# markers_pos_frac_scrna_cellstate <- seu_tbl_full %>%
+#   # select(cell_id, sample) %>%
+#   select(cell_id, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   left_join(select(scrna_markers, cell_id, cell_type_sc, cell_state), by = "cell_id") %>%
+#   na.omit() %>%
+#   group_by(sample, cell_state, cell_type_sc, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   tally %>%
+#   group_by(sample, cell_type_sc, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   mutate(nrel = n/sum(n)) %>%
+#   select(sample, cell_type_sc, cell_state, n, nrel, everything()) %>%
+#   ungroup
+# 
+# markers_pos_frac_scrna_gene <- seu_tbl_full %>%
+#   # select(cell_id, sample) %>%
+#   select(cell_id, sample, cell_type, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   left_join(select(scrna_markers, -sample, -cell_type), by = "cell_id") %>%
+#   na.omit() %>%
+#   select(-contains("state")) %>%
+#   mutate(cell_type = str_replace_all(cell_type, "\\.", " ")) %>%
+#   gather(gene, value, -cell_id, -sample, -cell_type, -tumor_supersite,
+#          -consensus_signature, -patient_id_short, -sort_short_x, -cell_type_sc) %>%
+#   mutate(gene_state = value > 0) %>%
+#   group_by(gene, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x) %>%
+#   mutate(n = sum(gene_state),
+#          nrel = n/length(n)) %>%
+#   ungroup %>%
+#   distinct(gene, sample, tumor_supersite, consensus_signature, patient_id_short, sort_short_x, n, nrel) %>%
+#   select(sample, gene, n, nrel, everything())
   
 
 ```
@@ -817,36 +734,36 @@ markers_pos_frac_scrna_gene <- seu_tbl_full %>%
 
 ```{r chunk_180, fig.width=6, fig.height=3}
 
-markers_pos_scrna_mpif <- mpif_cell_state_n_slide_compartment %>%
-  select(sample = sample_cd45p, cell_type_sc = cell_type,
-         compartment, n_mpif = n, nrel_mpif = nrel) %>%
-  group_by(sample, cell_type_sc, compartment) %>%
-  summarise(n_mpif = sum(n_mpif), nrel_mpif = sum(nrel_mpif)) %>%
-  ungroup() %>%
-  left_join(markers_pos_frac_scrna_celltype, by = c("sample", "cell_type_sc")) %>%
-  filter(sort_short_x == "CD45+",
-         cell_type_sc %in% c("CD8+", "CD68+"),
-         compartment %in% c("Stroma", "Tumor"))
-
-common_layers <- list(
-  facet_wrap(cell_type_sc~compartment, scales = "free"),
-  stat_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
-  stat_cor(aes(nrel, nrel_mpif), method = "spearman", color = "black"),
-  labs(x = "Fraction in scRNA",
-       y = "Fraction in mpIF")
-)
-
-p1 <- ggplot(markers_pos_scrna_mpif) +
-  geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
-  scale_color_manual(values = clrs$tumor_supersite) +
-  common_layers
-
-p2 <- ggplot(markers_pos_scrna_mpif) +
-  geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
-  scale_color_manual(values = clrs$consensus_signature) +
-  common_layers
-
-plot_grid(p1, p2)
+# markers_pos_scrna_mpif <- mpif_cell_state_n_slide_compartment %>%
+#   select(sample = sample_cd45p, cell_type_sc = cell_type,
+#          compartment, n_mpif = n, nrel_mpif = nrel) %>%
+#   group_by(sample, cell_type_sc, compartment) %>%
+#   summarise(n_mpif = sum(n_mpif), nrel_mpif = sum(nrel_mpif)) %>%
+#   ungroup() %>%
+#   left_join(markers_pos_frac_scrna_celltype, by = c("sample", "cell_type_sc")) %>%
+#   filter(sort_short_x == "CD45+",
+#          cell_type_sc %in% c("CD8+", "CD68+"),
+#          compartment %in% c("Stroma", "Tumor"))
+# 
+# common_layers <- list(
+#   facet_wrap(cell_type_sc~compartment, scales = "free"),
+#   stat_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
+#   stat_cor(aes(nrel, nrel_mpif), method = "spearman", color = "black"),
+#   labs(x = "Fraction in scRNA",
+#        y = "Fraction in mpIF")
+# )
+# 
+# p1 <- ggplot(markers_pos_scrna_mpif) +
+#   geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
+#   scale_color_manual(values = clrs$tumor_supersite) +
+#   common_layers
+# 
+# p2 <- ggplot(markers_pos_scrna_mpif) +
+#   geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
+#   scale_color_manual(values = clrs$consensus_signature) +
+#   common_layers
+# 
+# plot_grid(p1, p2)
 
 ```
 
@@ -854,35 +771,35 @@ plot_grid(p1, p2)
 
 ```{r chunk_190, fig.width=6, fig.height=3}
 
-markers_pos_scrna_mpif_state <- mpif_cell_state_n_slide_compartment %>%
-  group_by(sample_cd45p, compartment, cell_type) %>%
-  mutate(nrel_state = n/sum(n)) %>%
-  select(sample = sample_cd45p, cell_type_sc = cell_type,
-         compartment, n_mpif = n, nrel_mpif = nrel_state, cell_state) %>%
-  left_join(markers_pos_frac_scrna_cellstate, by = c("sample", "cell_type_sc", "cell_state")) %>%
-  filter(sort_short_x == "CD45+",
-         cell_state %in% c("CD8+TOX-PD1-", "CD8+TOX+PD1+", "CD68+PDL1-", "CD68+PDL1+"),
-         compartment %in% c("Stroma", "Tumor"))
-
-common_layers <- list(
-  facet_wrap(cell_state~compartment, scales = "free", ncol = 4),
-  geom_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
-  stat_cor(aes(nrel, nrel_mpif), method = "spearman", color = "black"),
-  labs(x = "Fraction in scRNA",
-       y = "Fraction in mpIF")
-)
-
-p1 <- ggplot(markers_pos_scrna_mpif_state) +
-  geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
-  scale_color_manual(values = clrs$tumor_supersite) +
-  common_layers
-
-p2 <- ggplot(markers_pos_scrna_mpif_state) +
-  geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
-  scale_color_manual(values = clrs$consensus_signature) +
-  common_layers
-
-plot_grid(p1, p2, ncol = 1)
+# markers_pos_scrna_mpif_state <- mpif_cell_state_n_slide_compartment %>%
+#   group_by(sample_cd45p, compartment, cell_type) %>%
+#   mutate(nrel_state = n/sum(n)) %>%
+#   select(sample = sample_cd45p, cell_type_sc = cell_type,
+#          compartment, n_mpif = n, nrel_mpif = nrel_state, cell_state) %>%
+#   left_join(markers_pos_frac_scrna_cellstate, by = c("sample", "cell_type_sc", "cell_state")) %>%
+#   filter(sort_short_x == "CD45+",
+#          cell_state %in% c("CD8+TOX-PD1-", "CD8+TOX+PD1+", "CD68+PDL1-", "CD68+PDL1+"),
+#          compartment %in% c("Stroma", "Tumor"))
+# 
+# common_layers <- list(
+#   facet_wrap(cell_state~compartment, scales = "free", ncol = 4),
+#   geom_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
+#   stat_cor(aes(nrel, nrel_mpif), method = "spearman", color = "black"),
+#   labs(x = "Fraction in scRNA",
+#        y = "Fraction in mpIF")
+# )
+# 
+# p1 <- ggplot(markers_pos_scrna_mpif_state) +
+#   geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
+#   scale_color_manual(values = clrs$tumor_supersite) +
+#   common_layers
+# 
+# p2 <- ggplot(markers_pos_scrna_mpif_state) +
+#   geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
+#   scale_color_manual(values = clrs$consensus_signature) +
+#   common_layers
+# 
+# plot_grid(p1, p2, ncol = 1)
 
 
 ```
@@ -891,37 +808,37 @@ plot_grid(p1, p2, ncol = 1)
 
 ```{r chunk_200, fig.width=6, fig.height=3}
 
-markers_pos_scrna_mpif_cd45n <- mpif_cell_state_n_slide_compartment %>%
-  select(sample = sample_cd45p, cell_type_sc = cell_type,
-         compartment, n_mpif = n, nrel_mpif = nrel) %>%
-  mutate(sample = str_replace_all(sample, "CD45P", "CD45N")) %>%
-  group_by(sample, cell_type_sc, compartment) %>%
-  summarise(n_mpif = sum(n_mpif), nrel_mpif = sum(nrel_mpif)) %>%
-  ungroup() %>%
-  left_join(markers_pos_frac_scrna_celltype, by = c("sample", "cell_type_sc")) %>%
-  filter(sort_short_x == "CD45-",
-         cell_type_sc %in% c("panCK+"),
-         compartment %in% c("Stroma", "Tumor"))
-
-common_layers <- list(
-  facet_wrap(cell_type_sc~compartment, scales = "free"),
-  stat_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
-  stat_cor(aes(nrel, nrel_mpif), method = "pearson", color = "black"),
-  labs(x = "Fraction in scRNA",
-       y = "Fraction in mpIF")
-)
-
-p1 <- ggplot(markers_pos_scrna_mpif_cd45n) +
-  geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
-  scale_color_manual(values = clrs$tumor_supersite) +
-  common_layers
-
-p2 <- ggplot(markers_pos_scrna_mpif_cd45n) +
-  geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
-  scale_color_manual(values = clrs$consensus_signature) +
-  common_layers
-
-plot_grid(p1, p2)
+# markers_pos_scrna_mpif_cd45n <- mpif_cell_state_n_slide_compartment %>%
+#   select(sample = sample_cd45p, cell_type_sc = cell_type,
+#          compartment, n_mpif = n, nrel_mpif = nrel) %>%
+#   mutate(sample = str_replace_all(sample, "CD45P", "CD45N")) %>%
+#   group_by(sample, cell_type_sc, compartment) %>%
+#   summarise(n_mpif = sum(n_mpif), nrel_mpif = sum(nrel_mpif)) %>%
+#   ungroup() %>%
+#   left_join(markers_pos_frac_scrna_celltype, by = c("sample", "cell_type_sc")) %>%
+#   filter(sort_short_x == "CD45-",
+#          cell_type_sc %in% c("panCK+"),
+#          compartment %in% c("Stroma", "Tumor"))
+# 
+# common_layers <- list(
+#   facet_wrap(cell_type_sc~compartment, scales = "free"),
+#   stat_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
+#   stat_cor(aes(nrel, nrel_mpif), method = "pearson", color = "black"),
+#   labs(x = "Fraction in scRNA",
+#        y = "Fraction in mpIF")
+# )
+# 
+# p1 <- ggplot(markers_pos_scrna_mpif_cd45n) +
+#   geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
+#   scale_color_manual(values = clrs$tumor_supersite) +
+#   common_layers
+# 
+# p2 <- ggplot(markers_pos_scrna_mpif_cd45n) +
+#   geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
+#   scale_color_manual(values = clrs$consensus_signature) +
+#   common_layers
+# 
+# plot_grid(p1, p2)
 
 
 ```
@@ -930,55 +847,36 @@ plot_grid(p1, p2)
 
 ```{r chunk_210, fig.width=6, fig.height=3}
 
-markers_pos_scrna_mpif_state_cd45n <- mpif_cell_state_n_slide_compartment %>%
-  group_by(sample_cd45p, compartment, cell_type) %>%
-  mutate(nrel_state = n/sum(n)) %>%
-  select(sample = sample_cd45p, cell_type_sc = cell_type,
-         compartment, n_mpif = n, nrel_mpif = nrel_state, cell_state) %>%
-  mutate(sample = str_replace_all(sample, "CD45P", "CD45N")) %>%
-  left_join(markers_pos_frac_scrna_cellstate, by = c("sample", "cell_type_sc", "cell_state")) %>%
-  filter(sort_short_x == "CD45-",
-         cell_state %in% c("panCK+PDL1-", "panCK+PDL1+"),
-         compartment %in% c("Stroma", "Tumor"))
-
-common_layers <- list(
-  facet_wrap(cell_state~compartment, scales = "free", ncol = 4),
-  geom_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
-  stat_cor(aes(nrel, nrel_mpif), method = "pearson", color = "black"),
-  labs(x = "Fraction in scRNA",
-       y = "Fraction in mpIF")
-)
-
-p1 <- ggplot(markers_pos_scrna_mpif_state_cd45n) +
-  geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
-  scale_color_manual(values = clrs$tumor_supersite) +
-  common_layers
-
-p2 <- ggplot(markers_pos_scrna_mpif_state_cd45n) +
-  geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
-  scale_color_manual(values = clrs$consensus_signature) +
-  common_layers
-
-plot_grid(p1, p2, ncol = 1)
-
-```
-
-```{r chunk_220}
-
-# mpif_cell_state_n %>%
-#   group_by(cell_type, fov_id) %>%
-#   mutate(n_ct = sum(n),
-#          nrel_ct = sum(nrel)) %>%
-#   ungroup() %>%
-#   distinct(-n_ct, -nrel_ct, .keep_all = T) %>%
-#   # sample_frac(0.01) %>%
-#   ggplot(aes(fov_id, nrel_ct)) +
-#   geom_point(aes(patient_id, nrel_ct, color = tumor_supersite),
-#              size = 0.01) +
-#   facet_grid(~cell_type,
-#              scale = "free_x", space = "free_x") +
-#   remove_xaxis +
-#   scale_color_manual(values = clrs$tumor_supersite)
+# markers_pos_scrna_mpif_state_cd45n <- mpif_cell_state_n_slide_compartment %>%
+#   group_by(sample_cd45p, compartment, cell_type) %>%
+#   mutate(nrel_state = n/sum(n)) %>%
+#   select(sample = sample_cd45p, cell_type_sc = cell_type,
+#          compartment, n_mpif = n, nrel_mpif = nrel_state, cell_state) %>%
+#   mutate(sample = str_replace_all(sample, "CD45P", "CD45N")) %>%
+#   left_join(markers_pos_frac_scrna_cellstate, by = c("sample", "cell_type_sc", "cell_state")) %>%
+#   filter(sort_short_x == "CD45-",
+#          cell_state %in% c("panCK+PDL1-", "panCK+PDL1+"),
+#          compartment %in% c("Stroma", "Tumor"))
+# 
+# common_layers <- list(
+#   facet_wrap(cell_state~compartment, scales = "free", ncol = 4),
+#   geom_smooth(aes(nrel, nrel_mpif), method = "lm", color = "black"),
+#   stat_cor(aes(nrel, nrel_mpif), method = "pearson", color = "black"),
+#   labs(x = "Fraction in scRNA",
+#        y = "Fraction in mpIF")
+# )
+# 
+# p1 <- ggplot(markers_pos_scrna_mpif_state_cd45n) +
+#   geom_point(aes(nrel, nrel_mpif, color = tumor_supersite)) +
+#   scale_color_manual(values = clrs$tumor_supersite) +
+#   common_layers
+# 
+# p2 <- ggplot(markers_pos_scrna_mpif_state_cd45n) +
+#   geom_point(aes(nrel, nrel_mpif, color = consensus_signature)) +
+#   scale_color_manual(values = clrs$consensus_signature) +
+#   common_layers
+# 
+# plot_grid(p1, p2, ncol = 1)
 
 ```
 
