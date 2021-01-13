@@ -19,7 +19,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 - [x] SPECTRUM v6 pre-Rx cohort expression object: `/work/shah/isabl_data_lake/analyses/68/75/6875/RNASCP/outs/`
 - [x] SPECTRUM v6 pre-Rx cohort embedding table: `/work/shah/isabl_data_lake/analyses/68/75/6875/RNASCP/outs/cells.tsv`
-- [x] v6 cell type objects: `/work/shah/isabl_data_lake/analyses/68/75/6875/RNASCP/outs/{cell_type}.rds`
+- [x] v6 cell type objects (pipeline output, for annotated objects, see further below): `/work/shah/isabl_data_lake/analyses/68/75/6875/RNASCP/outs/{cell_type}.rds`
 - [x] v6 cell type cluster markers: `/work/shah/isabl_data_lake/analyses/68/76/6875/RNASCP/outs/{cell_type}_markers.tsv`
 
 **Meta data** 
@@ -60,6 +60,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [ ] T.super [`_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd`](_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd)
     - [ ] Myeloid.super [`_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd`](_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd)
     - [x] Ovarian.cancer.cell.super [`_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd`](_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd)
+    - [ ] Endothelial.super [`_preprocessing/036_SPECTRUM_freeze_v6_prepro_Endothelial.super.Rmd`](_preprocessing/036_SPECTRUM_freeze_v6_prepro_Endothelial.super.Rmd)
     
 - [ ] cell type specific tasks
     - [x] Cancer cells: filter out low quality cells <1% mito reads and recluster []()
@@ -71,7 +72,9 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [ ] `Fibroblast.super.annotated.rds`
     - [ ] `T.super.annotated.rds`
     - [ ] `Myeloid.super.annotated.rds`
-    - [x] `Ovarian.cancer.cell.super.annotated.rds`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_embedding.tsv`
     - [ ] `CD8.T.cell.annotated.rds`
     - [ ] `Macrophage.annotated.rds`
 
