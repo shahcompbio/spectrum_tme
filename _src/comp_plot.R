@@ -9,13 +9,19 @@ remove_guides <- guides(color = F, fill = F, shape = F, alpha = F)
 ## rank a comp tbl by a certain rank_column and rank_value
 rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell") {
   rank_column <- enquo(rank_column)
-  comp_tbl %>% 
+  comp_lvl <- comp_tbl %>% 
     arrange(!!rank_column != rank_value, desc(nrel)) %>% 
-    mutate(sample_id_lvl = ordered(sample_id, levels = rev(unique(sample_id)))) %>%
+    mutate(sample_id_lvl = ordered(sample_id, levels = rev(unique(sample_id))))
+  comp_rank <- comp_lvl %>% 
+    distinct(!!rank_column, sample_id_lvl, .keep_all = T) %>% 
     group_by(!!rank_column) %>% 
     mutate(sample_id_rank = row_number(sample_id_lvl)) %>%
     mutate(sample_id_rank = scales::rescale(sample_id_rank, c(-1, 1))) %>% 
     ungroup %>% 
+    select(!!rank_column, sample_id_lvl, sample_id_rank)
+  
+  comp_lvl <- comp_lvl %>% 
+    left_join(comp_rank, by = c(as_label(rank_column), "sample_id_lvl")) %>% 
     mutate(!!rank_column := ordered(!!rank_column, levels = rev(unique(c(rank_value, names(clrs[[as_label(rank_column)]]))))))
 }
 
@@ -35,6 +41,7 @@ wilcoxon_wrapper <- function(comp_tbl_rank, rank_column, rank_value,
 wilcoxon_test <- function(comp_tbl_rank, rank_column, rank_value, test_var) {
   test_var <- enquo(test_var)
   rank_column <- enquo(rank_column)
+  comp_tbl_rank <- distinct(comp_tbl_rank, sample_id_lvl, .keep_all = T)
   all_values <- unique(pull(comp_tbl_rank, !!test_var))
   lapply(all_values, function(x) wilcoxon_wrapper(comp_tbl_rank, !!rank_column, rank_value, !!test_var, x)) %>% 
     setNames(all_values) %>% 
@@ -88,8 +95,8 @@ plot_comp_box <- function(comp_tbl_rank, x, y, color, rank_column, rank_value, p
   y <- enquo(y)
   color <- enquo(color)
   rank_column <- enquo(rank_column)
-  comp_tbl_rank <- filter(comp_tbl_rank, !!rank_column == rank_value)
-  
+  comp_tbl_rank <- filter(comp_tbl_rank, !!rank_column == rank_value) %>% 
+    distinct(sample_id_lvl, .keep_all = T)
   wilcoxon_tbl <- wilcoxon_test(comp_tbl_rank, !!rank_column, rank_value, !!y) %>% 
     mutate(fdr = p.adjust(pval, method = "BH"),
            pstar = ifelse(pval < pcut, "*", ""))
@@ -128,7 +135,8 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
   
   comp_tbl_rank <- filter(comp_tbl_rank, !!rank_column == rank_value) %>% 
     mutate(vector_group = !!vector_column == vector_value) %>% 
-    mutate(vector_group = ifelse(vector_group, "xstart", "xend"))
+    mutate(vector_group = ifelse(vector_group, "xstart", "xend")) %>% 
+    distinct(sample_id_lvl, .keep_all = T)
   
   comp_tbl_vector <- group_by(comp_tbl_rank, !!y) %>% 
     mutate(median_rank = median(!!x)) %>% 
@@ -167,22 +175,24 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
 }
 
 
-default_comp_grid_list <- function(comp_tbl, rank_column, rank_value, 
-                                   n_bar = T, nrel_bar = T, 
-                                   mutsig_box = T, site_box = T, vec_plot = T,
-                                   super_type = NULL) {
+default_comp_grid_list <- function(
+  comp_tbl, rank_column, rank_value, fill_column,
+  n_bar = T, nrel_bar = T, mutsig_box = T, site_box = T, vec_plot = T,
+  super_type = NULL) {
   rank_column <- enquo(rank_column)
+  fill_column <- enquo(fill_column)
   comp_tbl_rank <- rank_by(comp_tbl, !!rank_column, rank_value)
   plist <- list()
   if (n_bar) {
     plist$pbar1 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, n, 
-                                 !!rank_column, facet = sort_short_x, 
+                                 !!fill_column, 
+                                 facet = sort_short_x, 
                                  super_type = super_type) +
       remove_guides
   }
   if (nrel_bar) {
     plist$pbar2 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, nrel, 
-                                 !!rank_column, facet = sort_short_x, 
+                                 !!fill_column, facet = sort_short_x, 
                                  super_type = super_type) +
       remove_guides
   }
@@ -202,6 +212,7 @@ default_comp_grid_list <- function(comp_tbl, rank_column, rank_value,
                                    !!rank_column, rank_value) +
       remove_guides
   }
+  plist[1:(length(plist)-1)] <- lapply(plist[1:(length(plist)-1)], add, remove_xaxis)
   return(plist)
 }
 

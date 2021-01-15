@@ -61,6 +61,19 @@ signature_tbl <- read_tsv("/home/uhlitzf/spectrum_tme/_data/small/mutational_sig
 
 meta_tbl <- left_join(meta_tbl, signature_tbl, by = "patient_id")
 
+## load mpif meta data -------------------------------
+
+mpif_meta_tbl <- read_excel("_data/small/MSK SPECTRUM - mpIF.xlsx", sheet = 3) %>%
+  mutate(slide_id = str_replace_all(pici_id, " ", "_"),
+         sample_id = paste0(patient_id, "_", surgery, str_replace_all(toupper(tumor_subsite), " ", "_"))) %>%
+  mutate(patient_id_short = str_remove_all(patient_id, "SPECTRUM-OV-"),
+         tumor_supersite = str_replace_all(tumor_supersite, "Upper Quadrant", "UQ")) %>% 
+  mutate(tumor_megasite = ifelse(!tumor_supersite %in% c("Adnexa", "Ascites"),
+                                 "Other", tumor_supersite)) %>% 
+  mutate(tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
+  left_join(signature_tbl, by = "patient_id")
+
+
 ## cell type sort fraction -------------------------
 
 cell_type_super_lookup <- c(
