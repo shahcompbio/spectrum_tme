@@ -57,24 +57,26 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 - [ ] individual scripts for common tasks:
     - [ ] B.super [`_preprocessing/031_SPECTRUM_freeze_v6_prepro_B.super.Rmd`](_preprocessing/031_SPECTRUM_freeze_v6_prepro_B.super.Rmd)
     - [ ] Fibroblast.super [`_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd`](_preprocessing/032_SPECTRUM_freeze_v6_prepro_Fibroblast.super.Rmd)
-    - [ ] T.super [`_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd`](_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd)
-    - [ ] Myeloid.super [`_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd`](_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd)
+    - [x] T.super [`_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd`](_preprocessing/033_SPECTRUM_freeze_v6_prepro_T.super.Rmd)
+    - [x] Myeloid.super [`_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd`](_preprocessing/034_SPECTRUM_freeze_v6_prepro_Myeloid.super.Rmd)
     - [x] Ovarian.cancer.cell.super [`_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd`](_preprocessing/035_SPECTRUM_freeze_v6_prepro_Ovarian.cancer.cell.super.Rmd)
     - [ ] Endothelial.super [`_preprocessing/036_SPECTRUM_freeze_v6_prepro_Endothelial.super.Rmd`](_preprocessing/036_SPECTRUM_freeze_v6_prepro_Endothelial.super.Rmd)
     
 - [ ] cell type specific tasks
     - [x] Cancer cells: filter out low quality cells <1% mito reads and recluster []()
-    - [ ] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
+    - [x] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
     - [ ] Myeloid cells: run diffusion map on macrophage subset
 
 - [ ] output files and objects:
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/Ovarian.cancer.cell_marker_table_annotated.tsv`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/T.super_processed_filtered_annotated.rds`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/T.super_marker_table_annotated.tsv`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Myeloid.super_processed_filtered_annotated.rds`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/Myeloid.super_marker_table_annotated.tsv`
     - [ ] `B.super.annotated.rds`
     - [ ] `Fibroblast.super.annotated.rds`
-    - [ ] `T.super.annotated.rds`
-    - [ ] `Myeloid.super.annotated.rds`
-    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds`
-    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv`
-    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_embedding.tsv`
+    - [ ] `Endothelial.cell.super.annotated.rds`
     - [ ] `CD8.T.cell.annotated.rds`
     - [ ] `Macrophage.annotated.rds`
 

@@ -149,7 +149,7 @@ hyper_tbl <- test_set %>%
 #   facet_wrap(~cluster) +
 #   coord_flip()
   
-low_rank <- str_detect(unique(hyper_tbl$subtype), "doublet")
+low_rank <- str_detect(unique(hyper_tbl$subtype), "doublet|dissociated")
 subtype_lvl <- c(sort(unique(hyper_tbl$subtype)[!low_rank]), sort(unique(hyper_tbl$subtype)[low_rank]))
   
 cluster_label_tbl <- hyper_tbl %>% 
@@ -165,6 +165,11 @@ cluster_label_tbl <- hyper_tbl %>%
 seu_obj$cluster_label <- unname(deframe(cluster_label_tbl)[as.character(unlist(seu_obj[[paste0("RNA_snn_res.", louvain_resolution)]]))])
 plot_data$cluster_label <- seu_obj$cluster_label
 
+cluster_n_tbl <- seu_obj$cluster_label %>% 
+  table() %>% 
+  enframe("cluster_label", "cluster_n") %>% 
+  mutate(cluster_nrel = cluster_n/sum(cluster_n))
+
 marker_sheet <- marker_tbl %>% 
   left_join(cluster_label_tbl, by = "cluster") %>% 
   group_by(cluster_label) %>% 
@@ -172,11 +177,25 @@ marker_sheet <- marker_tbl %>%
   slice(1:50) %>% 
   mutate(rank = row_number(-avg_logFC)) %>% 
   select(cluster_label, gene, rank) %>% 
+  ungroup %>% 
+  mutate(cluster_label = ordered(cluster_label, levels = unique(c(names(clrs$cluster_label[[coi]]), sort(cluster_label))))) %>% 
   spread(cluster_label, gene) %>% 
   mutate_all(.funs = helper_f)
 
-formattable::formattable(marker_sheet)
+marker_tbl_annotated <- marker_tbl %>% 
+  left_join(cluster_label_tbl, by = "cluster") %>% 
+  left_join(cluster_n_tbl, by = "cluster_label") %>% 
+  select(-cluster) %>% 
+  mutate(cluster_label = ordered(cluster_label, levels = unique(c(names(clrs$cluster_label[[coi]]), sort(cluster_label))))) %>% 
+  arrange(cluster_label, -avg_logFC, p_val_adj)
+
 write_tsv(marker_sheet, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_marker_sheet.tsv"))
+write_tsv(marker_sheet, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/", coi, "_marker_sheet.tsv"))
+
+write_tsv(marker_tbl_annotated, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_marker_table_annotated.tsv"))
+write_tsv(marker_tbl_annotated, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/", coi, "_marker_table_annotated.tsv"))
+
+formattable::formattable(marker_sheet)
 
 ```
 
@@ -443,7 +462,7 @@ comp_plot_wrapper <- function(y = "nrel", switch = NULL) {
               aes_string("tumor_subsite_rx", y, fill = "cluster_label")) + 
     facet_grid(~patient_id, space = "free", scales = "free", switch = switch) +
     coord_cartesian(clip = "off") + 
-    # scale_fill_manual(values = clrs$cluster_label[[coi]]) + 
+    scale_fill_manual(values = clrs$cluster_label[[coi]]) + 
     theme(axis.text.x = element_blank(),
           axis.title.y = element_text(angle = 0, vjust = 0.5, hjust = 0.5, 
                                       margin = margin(0, -0.4, 0, 0, unit = "npc")),
@@ -536,7 +555,7 @@ hist_plot_wrapper <- function(x = "nrel") {
       stat = "binline", binwidth = bw, scale = 3) +
     facet_grid(label_supersite~., 
                space = "free", scales = "free") +
-    # scale_fill_manual(values = clrs$cluster_label[[coi]]) + 
+    scale_fill_manual(values = clrs$cluster_label[[coi]]) + 
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title.y = element_blank(),

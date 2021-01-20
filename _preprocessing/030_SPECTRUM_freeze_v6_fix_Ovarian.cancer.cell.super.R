@@ -15,15 +15,27 @@ theme_cowplot2 <- function(...) {
           plot.background = element_blank())
 }
 theme_set(theme_cowplot2())
-coi <- "Ovarian.cancer.cell"
-cell_sort <- "CD45-"
-louvain_resolution <- 0.2
 
+# coi <- "Ovarian.cancer.super"
+# cell_sort <- "CD45-"
+# louvain_resolution <- 0.2
+# nF <- 1000
+
+# coi <- "T.super"
+# cell_sort <- "CD45+"
+# louvain_resolution <- 0.2
+# nF <- 500
+# pMT_lower <- 1
+
+coi <- "Myeloid.super"
+cell_sort <- "CD45+"
+louvain_resolution <- 0.2
+nF <- 500
+pMT_lower <- 1
 
 ### load all data ---------------------------------
-# seu_obj <- read_rds(paste0("/work/shah/isabl_data_lake/analyses/16/52/1652/celltypes/", coi, "_processed.rds"))
-seu_obj <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs_pre/Ovarian.cancer.super_seurat_", louvain_resolution, ".rds"))
-seu_obj_sub <- subset(seu_obj, subset = nFeature_RNA > 1000 & percent.mt > 1)
+seu_obj <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs_pre/", coi, "_seurat_", louvain_resolution, ".rds"))
+seu_obj_sub <- subset(seu_obj, subset = nFeature_RNA > 500 & percent.mt > 1)
 set.seed(123)
 seu_obj_sample <- subset(seu_obj_sub, cells = sample(colnames(seu_obj_sub), 10000))
 
@@ -54,9 +66,6 @@ preprocess_wrapper <- . %>%
   RunUMAP(reduction = "pca", dims = 1:20, reduction.name = "umappca", reduction.key = "umappca_") %>%
   RunUMAP(reduction = "harmony", dims = 1:20, reduction.name = "umapharmony", reduction.key = "umapharmony_")
 
-# seu_obj_sample <- preprocess_wrapper(seu_obj_sample)
-# write_rds(seu_obj_sample, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_sample.rds")
-
 find_markers_parallel <- function(seu_x, resolution) {
   
   Idents(seu_x) <- seu_x[[resolution]] %>% {setNames(.[,1], rownames(.))}
@@ -73,24 +82,23 @@ find_markers_parallel <- function(seu_x, resolution) {
   
 }
 
-# marker_tbl_01 <- find_markers_parallel(seu_obj_sample, "RNA_snn_res.0.1")
-# write_tsv(marker_tbl_01, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_01_sample.tsv")
-# marker_tbl_02 <- find_markers_parallel(seu_obj_sample, "RNA_snn_res.0.2")
-# write_tsv(marker_tbl_02, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02_sample.tsv")
-# marker_tbl_03 <- find_markers_parallel(seu_obj_sample, "RNA_snn_res.0.3")
-# write_tsv(marker_tbl_03, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_03_sample.tsv")
- 
+## sample subset ---------------------------------
+
+seu_obj_sample <- preprocess_wrapper(seu_obj_sample)
+write_rds(seu_obj_sample, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_highqc_sample.rds"))
+
+Idents(seu_obj_sample) <- seu_obj_sample$RNA_snn_res.0.2
+marker_tbl_02_sample <- as_tibble(FindAllMarkers(seu_obj_sample, only.pos = T))
+write_tsv(marker_tbl_02_sample, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_highqc_markers_02_sample.tsv"))
+
+
+## full subset ---------------------------------
+
 seu_obj_sub <- preprocess_wrapper(seu_obj_sub)
-write_rds(seu_obj_sub, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc.rds")
-
-# seu_obj_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc.rds")
-
-## find markers ---------------------------------
+write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_highqc.rds"))
 
 Idents(seu_obj_sub) <- seu_obj_sub$RNA_snn_res.0.2
 marker_tbl_02 <- as_tibble(FindAllMarkers(seu_obj_sub, only.pos = T))
-write_tsv(marker_tbl_02, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv")
-
-# marker_tbl_02 <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv")
+write_tsv(marker_tbl_02, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_highqc_markers_02.tsv"))
 
 
