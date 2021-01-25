@@ -1,5 +1,5 @@
 T.super:
-  CD4.T:
+  CD4.T.naive:
   - CD4
   - IL7R
   - CCR7
@@ -8,15 +8,6 @@ T.super:
   - TCF7
   - CD40LG
   - LTB
-  CD4.T.KLRB1:
-  - CD4
-  - IL7R
-  - KLRB1
-  - IL4I1
-  - LTB
-  - LST1
-  - TNFSF13B
-  - CCR6
   CD4.T.CXCL13:
   - CD4
   - CXCL13
@@ -38,7 +29,7 @@ T.super:
   - IL2RA
   - TNFRSF4
   - TRAC
-  CD8.T:
+  CD8.T.cytotoxic:
   - GZMK
   - CD8A
   - CD8B
@@ -79,6 +70,14 @@ T.super:
   - CRTAM
   - PHLDA1
   - FABP5
+  NK.naive:
+  - IL7R
+  - KLRB1
+  - IL4I1
+  - LTB
+  - LST1
+  - TNFSF13B
+  - CCR6
   NK.CD56:
   - GNLY
   - TYROBP

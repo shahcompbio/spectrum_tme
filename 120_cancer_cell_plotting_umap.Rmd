@@ -203,11 +203,15 @@ cluster_comp <- plot_data %>%
   mutate(cell_type = "Ovarian.cancer.cell")
 
 plist <- default_comp_grid_list(filter(cluster_comp, sort_short_x == "CD45-"),
-                                cluster_label, "Cancer.cell.3", vec_plot = F, super_type = "Ovarian.cancer.cell")
+                                cluster_label, "Cancer.cell.3", cluster_label,
+                                vec_plot = F, site_box = F, 
+                                super_type = "Ovarian.cancer.cell")
 
-pcomp_grid_p_full <- plot_grid(plist$pbar1, plist$pbar2, plist$pbox1,
+pcomp_grid_p_full <- plot_grid(plotlist = plist,
                                ncol = 1, align = "v",
                                rel_heights = c(0.25, 0.25, 0.4))
+
+pcomp_grid_p_full
 
 ```
 
@@ -239,32 +243,7 @@ ggsave("_fig/003_cancer_cell/003_umap_grid.png", cancer_grid, width = 20, height
 
 ```
 
-
-```{r chunk_080}
-
-# ## downsample objects for exploration
-# # set.seed(123)
-# # seu_obj_tc_sub <- subset(seu_obj_tc, cells = sample(colnames(seu_obj_tc), 10000))
-# # seu_obj_cc_sub <- subset(seu_obj_cc, cells = sample(colnames(seu_obj_cc), 10000))
-# seu_obj_cc_sub <- seu_obj_cc
-# seu_obj_tc_sub <- seu_obj_tc
-# 
-# tc_data <- cbind(cell_id = colnames(seu_obj_tc_sub), FetchData(seu_obj_tc_sub, c("sample", "cluster_label", names(signature_modules), "CD8.ISG"))) %>% 
-#   filter(str_detect(cluster_label, "CD8")) %>% 
-#   as_tibble %>% 
-#   rename(isabl_id = sample) %>% 
-#   gather(module, tc_score, -cell_id, -isabl_id, -cluster_label) %>% 
-#   left_join(meta_tbl, by = "isabl_id")
-# 
-# patient_tc_ranks <- tc_data %>% 
-#   filter(sort_short == "CD45+", therapy == "pre-Rx") %>% 
-#   group_by(sample_id, module) %>% 
-#   summarise(median_tc_score = median(tc_score)) %>% 
-#   ungroup
-
-```
-
-# Differential expression in cancer cells
+# Differential pathway expression in cancer cells
 
 Are there certain pathways activated in cancer cells...
 
@@ -273,222 +252,141 @@ Are there certain pathways activated in cancer cells...
 
 ```{r chunk_090}
 
-# progeny_tbl <- progeny(as.matrix(seu_obj_cc_sub@assays$RNA@data[VariableFeatures(seu_obj_cc_sub),])) %>% 
-#   as_tibble(rownames = "cell_id") %>% 
-#   gather(pathway, score, -cell_id)
+set.seed(42)
+sampled_cell_ids <- sample(colnames(seu_obj_cc), 10000)
+seu_obj_cc_sub <- subset(seu_obj_cc, cells = sampled_cell_ids)
+
+plot_data <- FetchData(seu_obj_cc, c("umapharmony_1", "umapharmony_2", "sample", "cluster_label", grep("pathway", colnames(seu_obj_cc@meta.data), value = T))) %>%
+  as_tibble() %>%
+  gather(pathway, score, -c(1:4)) %>% 
+  left_join(meta_tbl, by = "sample") %>%
+  filter(sort_short == "CD45-", therapy == "pre-Rx") %>% 
+  mutate(pathway = str_remove_all(pathway, "\\.pathway")) %>% 
+  mutate(cluster_label = str_remove_all(cluster_label, "\\.cell"))
+
+cut_value <- 2
+pathway_summary_wrapper <- . %>% 
+  summarise(mean_score = mean(score),
+            median_score = median(score)) %>% 
+  mutate(median_cut = ifelse(median_score > cut_value, cut_value, 
+                             ifelse(median_score < -cut_value, -cut_value, 
+                                    median_score))) %>% 
+  mutate(mean_cut = ifelse(mean_score > cut_value, cut_value, 
+                           ifelse(mean_score < -cut_value, -cut_value, 
+                                  mean_score)))
+
+
+# plot_data_summary_patient <- plot_data %>% 
+#   group_by(patient_id_short, consensus_signature, cluster_label, 
+#            pathway, tumor_supersite) %>% 
+#   pathway_summary_wrapper
 # 
-# plot_data <- cbind(cell_id = colnames(seu_obj_cc_sub), FetchData(seu_obj_cc_sub, c("umapharmony_1", "umapharmony_2", "sample", "RNA_snn_res.0.2", "nFeature_RNA", "percent.mt"))) %>% 
-#   as_tibble() %>% 
-#   rename(isabl_id = sample) %>% 
-#   left_join(meta_tbl, by = "isabl_id") %>% 
-#   filter(sort_short == "CD45-", therapy == "pre-Rx") %>% 
-#   left_join(select(signature_tbl, patient_id, consensus_signature), by = "patient_id") %>% 
-#   left_join(progeny_tbl, by = "cell_id")
+# plot_data_summary_mutsig <- plot_data %>% 
+#   group_by(consensus_signature, pathway) %>% 
+#   pathway_summary_wrapper
 # 
-# patient_pw_ranks <- plot_data %>% 
-#   group_by(pathway, patient_id) %>% 
-#   summarise(median_score = median(score)) %>% 
-#   ungroup() %>% 
-#   arrange(pathway, median_score) %>% 
-#   # group_by(pathway) %>% 
-#   mutate(pw_rank = as.factor(row_number(median_score))) %>% 
-#   ungroup()
-# 
-# patient_pw_ranks_site <- plot_data %>% 
-#   group_by(pathway, sample_id) %>% 
-#   summarise(median_score_site = median(score)) %>% 
-#   ungroup() %>% 
-#   arrange(pathway, median_score_site) %>% 
-#   # group_by(pathway) %>% 
-#   mutate(pw_rank_site = as.factor(row_number(median_score_site))) %>% 
-#   ungroup()
-# 
-# plot_data_ranked <- plot_data %>% 
-#   left_join(patient_pw_ranks, by = c("pathway", "patient_id")) %>% 
-#   left_join(patient_pw_ranks_site, by = c("pathway", "sample_id"))
+# plot_data_summary_mutsig_cluster <- plot_data %>% 
+#   group_by(consensus_signature, cluster_label, pathway) %>% 
+#   pathway_summary_wrapper
 
-```
+plot_data_summary_cluster <- plot_data %>%
+  group_by(cluster_label, pathway) %>%
+  pathway_summary_wrapper
 
-## pathway scores across cancer cell clusters
-
-```{r chunk_100, fig.width=10, fig.height=5}
-
-# p1 <- ggplot() + 
-#   geom_point(aes(umapharmony_1, umapharmony_2, color = RNA_snn_res.0.2), size = 0.01, 
-#              data = distinct(plot_data, umapharmony_1, umapharmony_2, RNA_snn_res.0.2)) +
-#   theme_void() +
-#   guides(color = guide_legend(override.aes = list(size = 2))) +
-#   coord_fixed()
-# 
-# p2 <- ggplot() +
-#   geom_bar(aes(RNA_snn_res.0.2, n, fill = RNA_snn_res.0.2), stat = "identity",
-#            data = distinct(plot_data, umapharmony_1, umapharmony_2, RNA_snn_res.0.2) %>% 
-#              group_by(RNA_snn_res.0.2) %>% tally) +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-#   scale_y_log10() + 
-#   guides(fill = F)
-# 
-# p3 <- ggplot() + 
-#   geom_point(aes(umapharmony_1, umapharmony_2), size = 0.01, color = "grey80",
-#              data = distinct(plot_data, umapharmony_1, umapharmony_2)) +
-#   geom_point(aes(umapharmony_1, umapharmony_2, color = RNA_snn_res.0.2), size = 0.01, alpha = 0.1,
-#              data = distinct(plot_data, umapharmony_1, umapharmony_2, RNA_snn_res.0.2)) +
-#   facet_wrap(~RNA_snn_res.0.2, ncol = 8) + 
-#   theme_void() +
-#   guides(color = guide_legend(override.aes = list(size = 2))) +
-#   coord_fixed()
-# 
-# plot_grid(p1, p2, nrow = 1)
-# p3
-
-```
-
-```{r chunk_110, fig.width=15, fig.height=10}
-
-# ggplot() + 
-#   geom_point(aes(umapharmony_1, umapharmony_2), size = 0.1, color = "grey80",
-#              data = filter(plot_data, score <= 0)) +
-#   geom_point(aes(umapharmony_1, umapharmony_2, color = score), size = 0.1, 
-#              data = filter(plot_data, score > 0)) +
-#   facet_wrap(~pathway) + 
-#   scale_color_gradientn(colors = viridis(9)) + 
-#   theme_void()
-# 
-# ggplot() + 
-#   geom_boxplot(aes(RNA_snn_res.0.2, score, color = RNA_snn_res.0.2), 
-#                data = plot_data) +
-#   facet_wrap(~pathway, scales = "free") + 
-#   # scale_color_gradientn(colors = viridis(9)) + 
-#   theme_void() +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-# 
-# select(markers_tbl, cluster, gene) %>% 
-#   group_by(cluster) %>% 
-#   mutate(rank = row_number(cluster)) %>% 
-#   slice(1:20) %>% 
-#   spread(cluster, gene) %>% 
-#   knitr::kable()
-
-```
-
-## pathway scores across tumor sites
-
-```{r chunk_120, fig.width=15, fig.height=10}
-
-# ggplot() + 
-#   geom_boxplot(aes(tumor_supersite, score, color = tumor_supersite),
-#                data = plot_data_ranked) +
-#   facet_wrap(~pathway, scales = "free_y") + 
-#   scale_color_manual(values = clrs$tumor_supersite) + 
-#   theme_void()
-# 
-# ggplot() + 
-#   geom_boxplot(aes(pw_rank_site, score, color = tumor_supersite, group = isabl_id), 
-#                data = plot_data_ranked) +
-#   facet_wrap(~pathway, scales = "free") + 
-#   scale_color_manual(values = clrs$tumor_supersite) + 
-#   theme_void()
+plot_data_summary_mutsig_patient <- plot_data %>% 
+  group_by(consensus_signature, patient_id_short, pathway) %>% 
+  pathway_summary_wrapper
 
 
 ```
 
-## pathway scores across mutational signatures
+```{r chunk_100, fig.width=15, fig.height=10}
 
-```{r chunk_130, fig.width=15, fig.height=10}
+common_heat_layers <- list(
+  scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
+                       na.value = "grey10", 
+                       breaks = c(-cut_value, 0, cut_value), 
+                       labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
+                       limits = c(-cut_value, cut_value)),
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.title = element_blank(),
+        plot.margin = margin(0, 0, 0, 0))
+)
 
-# ggplot() + 
-#   geom_boxplot(aes(consensus_signature, score, color = consensus_signature), 
-#                data = plot_data) +
-#   facet_wrap(~pathway, scales = "free_y") + 
-#   scale_color_manual(values = clrs$consensus_signature) + 
-#   theme_void()
+# ggplot(plot_data_summary_patient) + 
+#   geom_tile(aes(cluster_label, patient_id_short, fill = median_cut)) +
+#   facet_grid(consensus_signature~pathway, scales = "free", space = "free") +
+#   common_heat_layers
+#   
+# ggplot(plot_data_summary_mutsig_cluster) + 
+#   geom_tile(aes(pathway, cluster_label, fill = median_cut)) +
+#   facet_grid(~consensus_signature, scales = "free", space = "free") +
+#   common_heat_layers   
 # 
-# ggplot(plot_data_ranked) + 
-#   geom_boxplot(aes(pw_rank, score, color = consensus_signature, group = patient_id)) +
-#   facet_wrap(~pathway, scales = "free") + 
-#   scale_color_manual(values = clrs$consensus_signature) + 
-#   scale_x_discrete(breaks = arrange(distinct(plot_data_ranked, pw_rank, patient_id_short), pw_rank)$pw_rank,
-#                      labels = arrange(distinct(plot_data_ranked, pw_rank, patient_id_short), pw_rank)$patient_id_short) +
-#   theme_void() +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+# ggplot(plot_data_summary_mutsig) + 
+#   geom_tile(aes(consensus_signature, pathway, fill = median_score)) +
+#   common_heat_layers
 
-```
+pw_plot1 <- ggplot(mutate(plot_data_summary_cluster, facet_helper = "")) +
+  geom_tile(aes(cluster_label, pathway, fill = mean_score)) +
+  common_heat_layers +
+  facet_grid(~facet_helper, scales = "free", space = "free") + 
+  labs(x = "Cluster", y = "Pathway", fill = "Mean\nPROGENy\nscore") +
+  scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
+                       na.value = "grey10", 
+                       breaks = c(-cut_value, 0, cut_value), 
+                       labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value))) +
+  theme(axis.text.x = element_blank())
 
-## correlation of pathway scores and T cell scores
+pw_plot1_anno <- ggplot(mutate(plot_data_summary_cluster, facet_helper = "")) +
+  geom_tile(aes(cluster_label, facet_helper, fill = cluster_label)) +
+  common_heat_layers + 
+  scale_fill_manual(values = clrs$cluster_label$Ovarian.cancer.cell %>% setNames(str_remove_all(names(.), "\\.cell"))) +
+  facet_grid(~facet_helper, scales = "free", space = "free") +
+  theme(axis.text.y = element_blank(),
+        strip.text = element_blank()) +
+  guides(fill = F)
+  
+pw_plot2 <- ggplot(plot_data_summary_mutsig_patient) + 
+  geom_tile(aes(patient_id_short, pathway, fill = mean_cut)) +
+  facet_grid(~consensus_signature, scales = "free", space = "free") + 
+  common_heat_layers +
+  labs(x = "Patient", y = "", fill = "Mean\nPROGENy\nscore") +
+  theme(axis.text.x = element_blank())
 
-```{r chunk_140, fig.width=18, fig.height=10}
+pw_plot2_anno <- ggplot(mutate(plot_data_summary_mutsig_patient, facet_helper = "")) +
+  geom_tile(aes(patient_id_short, facet_helper, fill = consensus_signature)) +
+  common_heat_layers + 
+  scale_fill_manual(values = clrs$consensus_signature) +
+  facet_grid(~consensus_signature, scales = "free", space = "free") + 
+  theme(axis.text.y = element_blank(),
+        strip.text = element_blank()) +
+  guides(fill = F)
 
-# tc_cc_cor_tbl <- patient_pw_ranks_site %>% 
-#   left_join(patient_tc_ranks, by = "sample_id") %>% 
-#   left_join(distinct(meta_tbl, patient_id, sample_id, tumor_supersite), 
-#             by = "sample_id") %>% 
-#   left_join(select(signature_tbl, patient_id, consensus_signature), 
-#             by = "patient_id") %>% 
-#   na.omit()
-# 
-# ggplot(tc_cc_cor_tbl) +
-#   geom_point(aes(median_tc_score, median_score_site, color = tumor_supersite),
-#              size = 0.1) +
-#   facet_grid(module~pathway) +
-#   scale_color_manual(values = clrs$tumor_supersite) +
-#   stat_cor(aes(median_tc_score, median_score_site), method = "spearman",
-#            label.sep = "\n") +
-#   geom_smooth(aes(median_tc_score, median_score_site), 
-#               method = "lm", color = "black")
-# 
-# ggplot(tc_cc_cor_tbl) +
-#   geom_point(aes(median_tc_score, median_score_site, color = consensus_signature),
-#              size = 0.1) +
-#   facet_grid(module~pathway) +
-#   scale_color_manual(values = clrs$consensus_signature) +
-#   stat_cor(aes(median_tc_score, median_score_site), method = "spearman",
-#            label.sep = "\n") +
-#   geom_smooth(aes(median_tc_score, median_score_site), 
-#               method = "lm", color = "black")
+pw_grid <- plot_grid(pw_plot1 + guides(fill = F), ggdraw(), pw_plot2 + guides(fill = F), 
+                     pw_plot1_anno, ggdraw(), pw_plot2_anno,
+                     nrow = 2, align = "v", axis = "lrtb",
+                     rel_widths = c(0.25, 0.05, 0.7), rel_heights = c(0.7, 0.3))
 
-```
+pw_boxplot <- filter(plot_data, pathway == "JAK.STAT") %>%
+  mutate(patient_id_short = ordered(patient_id_short, levels = unique(arrange(plot_data_summary_mutsig_patient, pathway != "JAK.STAT", median_score)$patient_id_short))) %>% 
+  ggplot() +
+  geom_boxplot(aes(patient_id_short, score, color = consensus_signature)) +
+  scale_color_manual(values = clrs$consensus_signature) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1)) +
+  labs(x = "Patient", y = "JAK/STAT pathway\nPROGENy score")
 
-# JAK-STAT signaling
+pw_grid_full <- ggdraw() +
+  draw_plot(pw_grid, x = 0, y = 0.5, width = 0.9, height = 0.5) +
+  draw_grob(get_legend(pw_plot2), x = 0.92, y = 0.25) +
+  draw_plot(pw_boxplot + guides(color = F), x = 0, y = 0, width = 0.65, height = 0.45)
 
-```{r chunk_150, fig.width=12, fig.height=4}
+pw_grid_full
 
-# p1 <- ggplot() + 
-#   geom_boxplot(aes(consensus_signature, score, color = consensus_signature), 
-#                data = filter(plot_data, pathway == "JAK-STAT")) +
-#   facet_wrap(~pathway, scales = "free_y") + 
-#   scale_color_manual(values = clrs$consensus_signature) +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-#   guides(color = F) +
-#   labs(x = "", y = "PROGENy score")
-# 
-# plot_data_ranked_jak_stat <- filter(plot_data_ranked, pathway == "JAK-STAT")
-# 
-# p2 <- ggplot(plot_data_ranked_jak_stat) + 
-#   geom_boxplot(aes(pw_rank, score, color = consensus_signature, group = patient_id)) +
-#   facet_wrap(~pathway, scales = "free") + 
-#   scale_color_manual(values = clrs$consensus_signature) + 
-#   scale_x_discrete(breaks = arrange(distinct(plot_data_ranked_jak_stat, pw_rank, patient_id_short), pw_rank)$pw_rank,
-#                      labels = arrange(distinct(plot_data_ranked_jak_stat, pw_rank, patient_id_short), pw_rank)$patient_id_short) +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-#   guides(color = F) +
-#   labs(x = "", y = "PROGENy score", color = "Signature")
-# 
-# p3 <- ggplot(filter(tc_cc_cor_tbl, pathway == "JAK-STAT", module == "CD8.ISG")) +
-#   geom_point(aes(median_tc_score, median_score_site, color = consensus_signature),
-#              size = 1) +
-#   facet_wrap(~pathway) +
-#   scale_color_manual(values = clrs$consensus_signature) +
-#   stat_cor(aes(median_tc_score, median_score_site), method = "spearman",
-#            label.sep = ", ") +
-#   geom_smooth(aes(median_tc_score, median_score_site), 
-#               method = "lm", color = "black") +
-#   labs(x = "ISG module score\nin CD8 T cells", 
-#        y = "JAK-STAT PROGENy\nscore in cancer cells", 
-#        color = "Signature") +
-#   theme(strip.text = element_blank())
-# 
-# plot_grid(plot_grid(p1, p2, align = "h", rel_widths = c(0.3, 0.7)), 
-#           p3, rel_widths = c(0.6, 0.4))
+ggsave("_fig/003_cancer_cell/003_pathway_heatmap.pdf", pw_grid_full, 
+       width = 15, height = 10)
 
 ```
 

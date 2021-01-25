@@ -2,6 +2,7 @@ consensus_signature:
   HRD-Dup: "#5890c0"
   HRD-Del: "#62a766"
   HRD-Other: "#4ac4b9"
+  HRD: "#4ac4b9"
   TD: "#d1352d"
   FBI: "#833216"
   L-Del: "#cdad00"
@@ -49,9 +50,9 @@ tumor_supersite:
   UQ: "#009E73" # palette_OkabeIto[5]
   Other: "#b3b3b3"
 tumor_megasite:
-  Adnexa: "#33a02c"
-  Ascites: "#b3b3b3"
-  Other: "#ff7f00"
+  Adnexa: "#ff0000"
+  Ascites: "#56B4E9"
+  Other: "#56B4E9"
 therapy:
   post-Rx: "#ff0000"
   pre-Rx: "#4682b4"
@@ -100,15 +101,16 @@ patient_id:
   SPECTRUM-OV-116: "#ff0000"
 cluster_label:
   T.super:
-    CD4.T: "#ff8a8a"
-    CD4.T.KLRB1: "#ff0000"
+    CD4.T.naive: "#ff8a8a"
+    CD4.T.ISG: "#ff0000"
     # CD4.T.FOS: "#ff0000"
-    CD4.T.CXCL13: "#ad2572"
-    CD4.T.reg: "#891417"
-    CD8.T: "#43a047"
+    CD4.T.CXCL13: "#891417"
+    CD4.T.reg: "#ad2572"
+    CD8.T.cytotoxic: "#43a047"
     # CD8.T.FOS: "#00897b"
     CD8.T.ISG: "#c0ca33"
     CD8.T.CXCL13: "#8bc34a"
+    NK.naive: "#7f54f3"
     NK.CD56: "#4FC3F7"
     NK.cytotoxic: "#00ACC1"
     # Stressed.T.NK: "#4a4549"

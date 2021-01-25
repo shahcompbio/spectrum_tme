@@ -7,10 +7,15 @@ remove_xaxis <- theme(axis.text.x = element_blank(),
 remove_guides <- guides(color = F, fill = F, shape = F, alpha = F)
 
 ## rank a comp tbl by a certain rank_column and rank_value
-rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell") {
+rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell", fill_column = cell_type, super_type = NULL) {
   rank_column <- enquo(rank_column)
+  fill_column <- enquo(fill_column)
   comp_lvl <- comp_tbl %>% 
-    arrange(!!rank_column != rank_value, desc(nrel)) %>% 
+    group_by(!!rank_column, sample_id) %>% 
+    mutate(nrel_total = sum(nrel)) %>% 
+    ungroup %>% 
+    arrange(!!rank_column != rank_value, desc(nrel_total)) %>% 
+    mutate(!!fill_column := ordered(!!fill_column, levels = rev(unique(!!fill_column)))) %>% 
     mutate(sample_id_lvl = ordered(sample_id, levels = rev(unique(sample_id))))
   comp_rank <- comp_lvl %>% 
     distinct(!!rank_column, sample_id_lvl, .keep_all = T) %>% 
@@ -21,8 +26,19 @@ rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell") {
     select(!!rank_column, sample_id_lvl, sample_id_rank)
   
   comp_lvl <- comp_lvl %>% 
-    left_join(comp_rank, by = c(as_label(rank_column), "sample_id_lvl")) %>% 
-    mutate(!!rank_column := ordered(!!rank_column, levels = rev(unique(c(rank_value, names(clrs[[as_label(rank_column)]]))))))
+    left_join(comp_rank, by = c(as_label(rank_column), "sample_id_lvl"))
+  
+  if (is.null(super_type)) {
+    comp_lvl <- comp_lvl %>% 
+      mutate(!!rank_column := ordered(!!rank_column, levels = rev(unique(c(rank_value, names(clrs[[as_label(rank_column)]]))))))
+  } 
+  
+  if (!is.null(super_type)) {
+    comp_lvl <- comp_lvl %>% 
+      mutate(!!rank_column := ordered(!!rank_column, levels = rev(unique(c(rank_value, names(clrs[[as_label(rank_column)]][[super_type]]))))))
+  } 
+  
+  return(comp_lvl)
 }
 
 wilcoxon_wrapper <- function(comp_tbl_rank, rank_column, rank_value, 
@@ -59,6 +75,7 @@ plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, su
   if (as_label(y) == "n") ylab <- paste0("# cells")
   p <- ggplot(comp_tbl_rank, aes(!!x, !!y, fill = !!fill)) +
     geom_bar(stat = "identity", position = position_stack(), width = 1) +
+    coord_cartesian(clip = "off", expand = F) + 
     theme(axis.title.y = element_text(margin = margin(0, -1, 0, 1, unit = "npc")),
           strip.text.y = element_blank(),
           strip.background.y = element_blank(),
@@ -148,8 +165,21 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
     arrange(median_rank) %>% 
     mutate(!!y := ordered(!!y, levels = unique(!!y)))
   
-  comp_tbl_rank <- comp_tbl_rank %>% 
-    mutate(!!y := ordered(!!y, levels = levels(pull(comp_tbl_vector, !!y))))
+  spacer <- "       "
+  ylabels_vector <- pull(comp_tbl_vector, !!y)
+  y_lvl <- levels(ylabels_vector)
+  y_lvl[c(T, F)] <- paste0(y_lvl[c(T, F)], spacer)
+  y_lvl
+  y_char <- as.character(ylabels_vector)
+  y_char[!(y_char %in% y_lvl)] <- paste0(y_char[!(y_char %in% y_lvl)], spacer)
+  ylabels_vector <- ordered(y_char, levels = y_lvl)
+  comp_tbl_vector <- mutate(comp_tbl_vector, !!y := ylabels_vector)
+
+  ylabels_rank <- pull(comp_tbl_rank, !!y)
+  y_char <- as.character(ylabels_rank)
+  y_char[!(y_char %in% y_lvl)] <- paste0(y_char[!(y_char %in% y_lvl)], spacer)
+  ylabels_rank <- ordered(y_char, levels = y_lvl)
+  comp_tbl_rank <- mutate(comp_tbl_rank, !!y := ylabels_rank)
   
   p <- ggplot() +
     geom_vline(xintercept = 0, linetype = 2) +
@@ -174,20 +204,27 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
   return(p)
 }
 
+# plot_comp_vector(rank_by(filter(comp_tbl_sample, sort_short_x == "CD45+"), 
+#                          cell_type, "T cell", cell_type), 
+#                  sample_id_rank, patient_id_short,
+#                  tumor_megasite, tumor_megasite, "Adnexa", 
+#                  cell_type, "T cell")
 
 default_comp_grid_list <- function(
-  comp_tbl, rank_column, rank_value, fill_column,
+  comp_tbl, rank_column, rank_value, fill_column, 
   n_bar = T, nrel_bar = T, mutsig_box = T, site_box = T, vec_plot = T,
-  super_type = NULL) {
+  super_type = NULL, nmax = 10000) {
   rank_column <- enquo(rank_column)
   fill_column <- enquo(fill_column)
-  comp_tbl_rank <- rank_by(comp_tbl, !!rank_column, rank_value)
+  comp_tbl_rank <- rank_by(comp_tbl, !!rank_column, rank_value, !!fill_column, 
+                           super_type = super_type)
   plist <- list()
   if (n_bar) {
     plist$pbar1 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, n, 
                                  !!fill_column, 
                                  facet = sort_short_x, 
-                                 super_type = super_type) +
+                                 super_type = super_type,
+                                 nmax = nmax) +
       remove_guides
   }
   if (nrel_bar) {
@@ -199,12 +236,12 @@ default_comp_grid_list <- function(
   if (mutsig_box) {
     plist$pbox1 <- plot_comp_box(comp_tbl_rank, sample_id_rank, consensus_signature, 
                                  consensus_signature, !!rank_column, rank_value) + 
-      remove_xaxis + remove_guides
+      remove_guides
   }
   if (site_box) {
     plist$pbox2 <- plot_comp_box(comp_tbl_rank, sample_id_rank, tumor_supersite, 
                                  tumor_supersite, !!rank_column, rank_value) + 
-      remove_xaxis + remove_guides
+      remove_guides
   }
   if (vec_plot) {
     plist$pvec <- plot_comp_vector(comp_tbl_rank, sample_id_rank, patient_id_short,

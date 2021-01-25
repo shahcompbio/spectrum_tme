@@ -334,6 +334,7 @@ for (i in 1:length(progeny_list)) {
 }
 
 write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered_annotated.rds"))
+seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered_annotated.rds"))
 
 ```
 

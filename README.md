@@ -63,7 +63,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [ ] Endothelial.super [`_preprocessing/036_SPECTRUM_freeze_v6_prepro_Endothelial.super.Rmd`](_preprocessing/036_SPECTRUM_freeze_v6_prepro_Endothelial.super.Rmd)
     
 - [ ] cell type specific tasks
-    - [x] Cancer cells: filter out low quality cells <1% mito reads and recluster []()
+    - [x] Cancer cells: filter out low quality cells <1% mito reads and recluster 
     - [x] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
     - [ ] Myeloid cells: run diffusion map on macrophage subset
 
