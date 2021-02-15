@@ -80,6 +80,32 @@ seu_tbl_full <- seu_tbl %>%
                                                "CD45-", sort_short))) %>% 
   left_join(consOV_tbl, by = "cell_id")
 
+
+```
+
+```{r chunk_035}
+
+# ## extract cell cycle tbl
+# cell_cycle_list <- as.list(rep(NA, times = length(names(clrs$cluster_label)))) %>%
+#   setNames(names(clrs$cluster_label))
+# 
+# for (i in 1:length(cell_cycle_list)) {
+#   seu_obj <- read_rds(
+#     paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/outs_pre/",
+#            names(cell_cycle_list)[i], "_seurat_0.1.rds"))
+#   cell_cycle_list[[i]] <- as_tibble(FetchData(seu_obj, c("cell_id", "S.Score", "G2M.Score", "CC.Diff", "Phase")))
+#   rm(seu_obj)
+# }
+# 
+# cell_cycle_tbl <- bind_rows(cell_cycle_list)
+# 
+# write_tsv(cell_cycle_tbl, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/cell_cycle_tbl.tsv")
+
+cell_cycle_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/cell_cycle_tbl.tsv")
+
+seu_tbl_full <- seu_tbl_full %>% 
+  left_join(cell_cycle_tbl, by = "cell_id")
+
 # seu_tbl_full <- seu_tbl_full %>%
 #   sample_n(10000)
 
@@ -198,6 +224,16 @@ umap_mutsig_mini <- base_umap +
   guides(color = F)
 
 umap_mutsig_legend <- cowplot::get_legend(umap_mutsig)
+
+umap_phase <- base_umap + 
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = Phase), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  scale_color_manual(values = clrs$Phase) + 
+  guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
+                              ncol = 1, 
+                              label.position = "right")) +
+  theme(legend.text = element_text(size = 14, margin = ggplot2::margin(0, 10, 0, 0)),
+        legend.spacing.x = unit(0, "npc")) +
+  labs(title = "Phase", color = "")
 
 continuous_umap_layers <- list(
   scale_color_viridis_c(),
@@ -553,9 +589,10 @@ figS1_panel <- ggdraw() +
   draw_plot(add_umap_coord(umap_umis), width = 0.24, height = 0.48, x = 0.01, y = 0.5) +
   draw_plot(add_umap_coord(umap_genes), width = 0.24, height = 0.48, x = 0.25, y = 0.5) +
   draw_plot(add_umap_coord(umap_mitos), width = 0.24, height = 0.48, x = 0.01, y = 0) +
+  draw_plot(add_umap_coord(umap_phase), width = 0.24, height = 0.48, x = 0.25, y = 0) +
   draw_plot(qc_plot, width = 0.5, height = 0.48, x = 0.5, y = 0.5) +
   draw_grob(mutsig_legend, x = 0.55, y = 0.48, hjust = 0, vjust = 1) +
-  draw_grob(consOV_legend, x = 0.55, y = 0.25, hjust = 0, vjust = 1) +
+  draw_grob(consOV_legend, x = 0.55, y = 0.22, hjust = 0, vjust = 1) +
   draw_grob(cell_type_legend, x = 0.7, y = 0.48, hjust = 0, vjust = 1) +
   draw_grob(site_legend, x = 0.85, y = 0.48, hjust = 0, vjust = 1) +
   draw_label("A", x = 0.01, y = 0.98, fontface = "bold", size = 22) +

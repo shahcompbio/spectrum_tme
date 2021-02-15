@@ -251,10 +251,10 @@ my_subtypes <- my_subtypes[my_subtypes %in% unique(seu_obj$cluster_label)]
 my_subtypes <- my_subtypes[my_subtypes %in% names(clrs$cluster_label[[coi]])]
 
 cells_to_keep <- colnames(seu_obj)[seu_obj$cluster_label %in% my_subtypes]
-seu_obj_sub <- subset(seu_obj, cells = cells_to_keep)
-seu_obj_sub <- RunUMAP(seu_obj_sub, dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
-seu_obj_sub$cluster_label <- seu_obj$cluster_label[colnames(seu_obj) %in% colnames(seu_obj_sub)]
-write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
+# seu_obj_sub <- subset(seu_obj, cells = cells_to_keep)
+# seu_obj_sub <- RunUMAP(seu_obj_sub, dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
+# seu_obj_sub$cluster_label <- seu_obj$cluster_label[colnames(seu_obj) %in% colnames(seu_obj_sub)]
+# write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
 seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
 
 plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label"))) %>% 
@@ -632,6 +632,142 @@ ggplot(comp_tbl_z) +
 
 ```
 
+### macrophage diffusion maps
+
+```{r chunk_150, fig.width=12, fig.height=4}
+
+## subset macrophages
+# seu_obj_mp <- seu_obj_sub %>%
+#   subset(subset = cluster_label %in% grep("^M1|^M2", unique(seu_obj_sub$cluster_label), value = T)) %>%
+#   RunUMAP(dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
+# 
+# write_rds(seu_obj_mp, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed.rds")
+
+seu_obj_mp <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed.rds")
+
+```
+
+```{r chunk_170, fig.width=12, fig.height=4}
+
+# root_cell <- "SPECTRUM-OV-031_S1_CD45P_LEFT_FALLOPIAN_TUBE_AACAAGATCATTGCTT"
+# seu_obj_mp_sub <- subset(seu_obj_mp, cells = c(root_cell, colnames(seu_obj_mp)[colnames(seu_obj_mp)!=root_cell][-1]))
+# 
+# dc_obj <- DiffusionMap(seu_obj_mp_sub@reductions$harmony@cell.embeddings, k = 100)
+# dc_mat <- dc_obj@eigenvectors
+# colnames(dc_mat) <- paste0("DC_", 1:ncol(dc_mat))
+# seu_obj_mp_sub[["DC"]] <- CreateDimReducObject(embeddings = dc_mat, key = "DC_", assay = DefaultAssay(seu_obj_mp_sub))
+# 
+# write_rds(seu_obj_mp_sub, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed_filtered.rds")
+# 
+# dpt_obj <- DPT(dc_obj)
+# write_rds(dpt_obj, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_sub_dpt.rds")
+# seu_obj_mp_sub$DPT1 <- dpt_obj$DPT1
+# 
+# write_rds(seu_obj_mp_sub, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed_filtered.rds")
+seu_obj_mp_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed_filtered.rds")
+
+```
+
+```{r chunk_180, fig.width=12, fig.height=4}
+
+# plot_data_sub_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label"))) %>% 
+#   left_join(meta_tbl, by = "sample") %>% 
+#   mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-"),
+#          tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
+#   mutate(cell_id = colnames(seu_obj_sub),
+#          cluster_label = ordered(cluster_label, levels = my_subtypes),
+#          )
+#   
+# if (cell_sort == "CD45+") {
+# plot_data_sub_sub <- filter(plot_data_sub_sub, sort_parameters != "singlet, live, CD45-", !is.na(tumor_supersite))
+# }
+# 
+# if (cell_sort == "CD45-") {
+# plot_data_sub_sub <- filter(plot_data_sub_sub, sort_parameters != "singlet, live, CD45+", !is.na(tumor_supersite))
+# }
+# 
+# ggplot(plot_data_sub_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label)) + 
+#   common_layers_disc +
+#   ggtitle("Sub cluster") +
+#   #facet_wrap(~cluster_label) +
+#   scale_color_manual(values = clrs$cluster_label[[coi]])
+# 
+# ggplot(plot_data_sub_sub, aes(umapharmony_1, umapharmony_2, color = patient_id_short)) + 
+#   common_layers_disc +
+#   ggtitle("Patient") +
+#   # facet_wrap(~therapy) +
+#   scale_color_manual(values = clrs$patient_id_short)
+# 
+# ggplot(plot_data_sub_sub, aes(umapharmony_1, umapharmony_2, color = tumor_supersite)) + 
+#   # geom_point(aes(umapharmony_1, umapharmony_2), 
+#   #            color = "grey90", size = 0.01, 
+#   #            data = select(plot_data_sub_sub, -tumor_supersite)) +
+#   common_layers_disc +
+#   ggtitle("Site") +
+#   # facet_wrap(~therapy) +
+#   scale_color_manual(values = clrs$tumor_supersite)
+# 
+# write_tsv(select(plot_data_sub_sub, cell_id, everything(), -umapharmony_1, -umapharmony_2, -contains("RNA_")), paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_embedding_sub.tsv"))
+
+```
+
+### UMAP & DC
+
+```{r chunk_190, fig.width=7, fig.height=4}
+
+plot_data_mp_sub <- as_tibble(FetchData(seu_obj_mp_sub, c(myfeatures, "cluster_label", "DC_1", "DC_2"))) %>% 
+  left_join(meta_tbl, by = "sample") %>% 
+  mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-"),
+         tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
+  mutate(cell_id = colnames(seu_obj_mp_sub),
+         cluster_label = ordered(cluster_label, levels = names(clrs$cluster_label[[coi]])))
+  
+if (cell_sort == "CD45+") {
+plot_data_mp_sub <- filter(plot_data_mp_sub, sort_parameters != "singlet, live, CD45-", !is.na(tumor_supersite))
+}
+
+if (cell_sort == "CD45-") {
+plot_data_mp_sub <- filter(plot_data_mp_sub, sort_parameters != "singlet, live, CD45+", !is.na(tumor_supersite))
+}
+
+ggplot(plot_data_mp_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label)) + 
+  common_layers_disc +
+  ggtitle("Sub cluster") +
+  #facet_wrap(~cluster_label) +
+  scale_color_manual(values = clrs$cluster_label[[coi]])
+
+ggplot(plot_data_mp_sub, aes(umapharmony_1, umapharmony_2, color = patient_id_short)) + 
+  common_layers_disc +
+  ggtitle("Patient") +
+  # facet_wrap(~therapy) +
+  scale_color_manual(values = clrs$patient_id_short)
+
+ggplot(plot_data_mp_sub, aes(umapharmony_1, umapharmony_2, color = tumor_supersite)) + 
+  common_layers_disc +
+  ggtitle("Site") +
+  # facet_wrap(~therapy) +
+  scale_color_manual(values = clrs$tumor_supersite)
+
+ggplot(plot_data_mp_sub, aes(DC_1, DC_2, color = cluster_label)) + 
+  common_layers_disc +
+  ggtitle("Sub cluster") +
+  #facet_wrap(~cluster_label) +
+  scale_color_manual(values = clrs$cluster_label[[coi]])
+
+ggplot(plot_data_mp_sub, aes(DC_1, DC_2, color = patient_id_short)) + 
+  common_layers_disc +
+  ggtitle("Patient") +
+  # facet_wrap(~therapy) +
+  scale_color_manual(values = clrs$patient_id_short)
+
+ggplot(plot_data_mp_sub, aes(DC_1, DC_2, color = tumor_supersite)) + 
+  common_layers_disc +
+  ggtitle("Site") +
+  # facet_wrap(~therapy) +
+  scale_color_manual(values = clrs$tumor_supersite)
+
+```
+
 
 # session info
 
@@ -640,4 +776,5 @@ ggplot(comp_tbl_z) +
 devtools::session_info()
 
 ```
+
 

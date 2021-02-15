@@ -29,6 +29,14 @@ T.super:
   - IL2RA
   - TNFRSF4
   - TRAC
+  CD4.Th17:
+  - IL7R
+  - KLRB1
+  - IL4I1
+  - LTB
+  - LST1
+  - TNFSF13B
+  - CCR6
   CD8.T.cytotoxic:
   - GZMK
   - CD8A
@@ -70,14 +78,6 @@ T.super:
   - CRTAM
   - PHLDA1
   - FABP5
-  NK.naive:
-  - IL7R
-  - KLRB1
-  - IL4I1
-  - LTB
-  - LST1
-  - TNFSF13B
-  - CCR6
   NK.CD56:
   - GNLY
   - TYROBP
@@ -397,109 +397,7 @@ Endothelial.cell:
   - CDC20
   - CDK1
   - PTTG1
-Stromal.super:
-  Arterial.EC:
-  - EFNB2 # 18972135
-  - NOTCH4 # 18972135
-  - DLL4 # 18972135
-  - JAG2 # 18972135
-  Venous.EC:
-  - ACKR1 # 18972135, 28526034
-  - EPHB4 # 18972135
-  - NR2F2 # 18972135
-  - ADIRF
-  - C7
-  - POSTN
-  - OLFM1
-  Capillary.EC:
-  - CD36 # 23968980, 31850371
-  - FABP4 # 23968980, 31850371
-  - FABP5
-  Lymphatic.EC:
-  - CCL21 # 21593766
-  - DOCK5
-  - MRC1
-  - EFNA5
-  - IGF1
-  - RELN
-  - PDPN
-  - COLEC12
-  Pericyte:
-  - COL4A1
-  - COL4A2
-  - RGS5
-  - NDUFA4L2
-  - MCAM
-  - IGFBP7
-  - PP1R14A
-  - CCDC102B
-  - A2M
-  - HIGD1B
-  - MHY11
-  - ACTA2
-  - ADIRF
-  - CAV1
-  - CRIP1
-  CAF_1:
-  - MMP11 
-  - COL11A1
-  - COL12A1
-  - COL5A1
-  - COL5A2
-  - COL6A3
-  - FN1 # 29021221
-  CAF_2:
-  - MMP7
-  - MGP # 17273163
-  - C7
-  - CFD
-  - ADH1B
-  - GSN
-  CAF_3:
-  - MMP1
-  - MMP13
-  - TDO2
-  - DIO2
-  - CXCL13
-  - CTSK
-  - ACKR4 
-  Cycling.FB:
-  - MKI67
-  - TOP2A
-  - CDC20
-  - CDK1
-  - PTTG1
-  Cardiac.FB.like:
-  - STAR # 23831818
-  - PEG3 # 28774379
-  IL1.CAF:
-  - HAS1
-  - CXCL1
-  - PRG4
-  - AQP1
-  - C3
-  - CALB2
-  - CCDC80
-  - CLDN1
-  - HP
-  - EZR
-  - SLPI
-  - UPK3B
-  - KRT8
-  - KRT18
-  - KRT19
-  Angiogenic.CAF:
-  - VEGFA
-  - CA12
-  - CA7
-  - ANGPTL4
-  - EGLN3
-  - ENO1
-  - ENO2
-  - BNIP3
-  - HILPDA
-  - LDHA
-Fibroblast:
+Fibroblast.super:
   Pericyte:
   - COL4A1
   - COL4A2
@@ -517,7 +415,7 @@ Fibroblast:
   - CAV1
   - CRIP1
   - MEF2C
-  Activated.TGFb.CAF:
+  Activated.CAF.TGFb:
   - MMP11 
   - MMP13
   - COL11A1
@@ -529,7 +427,16 @@ Fibroblast:
   - ACTA2
   - FAP
   - FN1 # 29021221
-  Activated.IGF1.CAF:
+  Activated.CAF.ISG:
+  - CXCL10
+  - ISG15
+  - IFIT1
+  - IFIT3
+  - RSAD2
+  - MX1
+  - IFI44L
+  - IFIT2
+  Activated.CAF.IGF1:
   - APOE
   - IGF1 # 17273163
   - CYR61
@@ -549,11 +456,8 @@ Fibroblast:
   - CDC20
   - CDK1
   - PTTG1
-  Mesothelial.IL1.CAF:
-  - HAS1
-  - CXCL1 
+  Mesothelial.CAF.IL1:
   - HP
-  - SLPI
   - PRG4
   - AQP1
   - C3
@@ -565,7 +469,7 @@ Fibroblast:
   - KRT8
   - KRT18
   - KRT19
-  Angiogenic.VEGF.CAF:
+  Angiogenic.CAF:
   - VEGFA
   - CA12
   - CA7
@@ -576,6 +480,25 @@ Fibroblast:
   - BNIP3
   - HILPDA
   - LDHA
+  OV.075.CAF:
+  - WNT5A
+  - WNT10A
+  - MMP1
+  - RARRES2
+  - DIO2
+  - TDO2
+  OV.105.CAF:
+  - MT1E
+  - MT1X
+  - MT1G
+  - MT3
+  - MT2A
+  dissociated:
+  - IGKC
+  - MALAT1
+  - MTRNR2L12
+  - MTRNR2L8
+  - SERPINF1
 Ovarian.cancer.cell:
   Cancer.cell.1:
   - DAPL1

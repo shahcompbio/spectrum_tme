@@ -12,10 +12,11 @@ output:
 editor_options: 
   chunk_output_type: console
 params: 
-  cell_type: "T.cell"
+  cell_type_super: "T.super"
   cell_type_major: ["T.cell"]
   cell_sort: "CD45+"
-  louvain_resolution: 0.2
+  louvain_resolution: 0.3
+  louvain_cluster: "RNA_snn_res.0.3"
   pcut: 0.05
 ---
 
@@ -38,10 +39,11 @@ library(viridis)
 library(ComplexHeatmap)
 library(grid)
 
-coi <- params$cell_type
+coi <- params$cell_type_super
 cell_sort <- params$cell_sort
 cell_type_major <- params$cell_type_major
 louvain_resolution <- params$louvain_resolution
+louvain_cluster <- params$louvain_cluster
 pcut <- params$pcut
 
 # p1 <- ggplot(data.frame(x = 1:5, y = 1:5), aes(x, y)) + geom_point()
@@ -60,119 +62,43 @@ pcut <- params$pcut
 
 ```{r chunk_020}
 
-### load all data ---------------------------------
+## load global vars: 
+source("_src/global_vars.R")
 
-helper_f <- function(x) ifelse(is.na(x), "", x)
-markers_v6 <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_major.yaml")
-
-helper_f2 <- function(x) select(unnest(enframe(x, "subtype", "gene"), cols = gene), gene, subtype)
-markers_v6_super <- lapply(yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_super.yaml"), helper_f2)
-
-clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_colors.yaml") %>% 
-  lapply(function(x) map_depth(x, vec_depth(x)-2, unlist))
-
-cell_type_super_lookup <- c(
-  B.cell = "Immune",
-  Plasma.cell = "Immune",
-  T.cell = "Immune", 
-  Monocyte = "Immune", 
-  Myeloid.cell = "Immune", 
-  Dendritic.cell = "Immune", 
-  Endothelial.cell = "Stromal",
-  Fibroblast = "Stromal", 
-  Ovarian.cancer.cell = "Stromal", 
-  Other = "Other"
-)
-
-clrs$patient_id_short <- clrs$patient_id
-names(clrs$patient_id_short) <- str_remove_all(names(clrs$patient_id), "SPECTRUM-OV-")
+# meta_tbl
+# clrs
+# markers_v6
+# markers_v6_super
+# cell_type_super_lookup
 
 ```
 
-```{r chunk_025}
+```{r chunk_030}
 
-meta_tbl <- read_excel("_data/small/MSK SPECTRUM - Single cell RNA-seq_v6.xlsx", sheet = 2) %>% 
-  mutate(patient_id_short = str_remove_all(patient_id, "SPECTRUM-OV-")) %>% 
-  filter(therapy == "pre-Rx")
+myfeatures <- c("UMAP_1", "UMAP_2", "umapharmony_1", "umapharmony_2", "sample", "doublet", "nCount_RNA", "nFeature_RNA", "percent.mt", "doublet_score", "cell_type")
 
-signature_tbl <- read_tsv("_data/small/mutational_signatures_summary.tsv") %>% 
-  select(patient_id, consensus_signature) %>% 
-  bind_rows(tibble(patient_id = unique(sort(meta_tbl$patient_id[!(meta_tbl$patient_id %in% .$patient_id)])), consensus_signature = "NA")) %>% 
-  mutate(consensus_signature = ordered(consensus_signature, levels = names(clrs$consensus_signature))) %>%
-  arrange(consensus_signature)
+seu_obj_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/T.super_processed_filtered_sub.rds")
 
-myfeatures <- c("UMAP_1", "UMAP_2", "umapharmony_1", "umapharmony_2", "sample", "RNA_snn_res.0.1", "RNA_snn_res.0.2", "RNA_snn_res.0.3", "doublet", "nCount_RNA", "nFeature_RNA", "percent.mt", "doublet_score", "cell_type")
-
-```
-
-```{r chunk_032}
-
-seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/T.cell_processed_filtered_sub.rds"))
-
-marker_tbl <- read_tsv(paste0("/work/shah/isabl_data_lake/analyses/16/52/1652/celltypes/T.cell_markers.tsv")) %>% 
-  filter(resolution == louvain_resolution) %>% 
-  mutate(cluster = as.factor(as.character(cluster))) %>% 
-  left_join(FetchData(seu_obj_sub, c("cluster_label", paste0("RNA_snn_res.", louvain_resolution))) %>% 
-  as_tibble() %>% 
-  distinct(cluster_label, .keep_all = T) %>% 
-    setNames(c("cluster_label", "cluster")),
-  by = "cluster"
-)
-
-cluster_label_cd8 <- c(
-  `2` = "CD8.T.naive",
-  `1` = "CD8.T.activated.FOS",
-  `6` = "CD8.T.activated.CD40LG",
-  `5` = "CD8.T.activated.HSP",
-  `3` = "CD8.T.dysfunctional.ISG",
-  `0` = "CD8.T.dysfunctional.CXCL13",
-  `4` = "gd.T.cell",
-  `7` = "doublet.Plasma.cell"
-)
-
-marker_tbl_cd8 <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_markers.tsv") %>% 
-  mutate(cluster = as.character(cluster)) %>% 
-  mutate(cluster_label_x = cluster_label_cd8[cluster])
+marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/T.super_marker_table_annotated_full.tsv")
 
 marker_tbl_top <- marker_tbl %>% 
-  filter(avg_logFC > 0.5,
+  filter(avg_logFC > 1,
          p_val_adj < 0.01,
-         pct.1 > 0.1,
-         pct.2 < 0.9,
-         !is.na(cluster_label),
-         !(cluster_label %in% cluster_label_cd8)) %>% 
-  rename(cluster_label_x = cluster_label)
+         pct.1 > 0.2,
+         pct.2 < 0.8,
+         !is.na(cluster_label_sub),
+         !str_detect(gene, "^RPS|^RPL"))
 
-marker_tbl_top_cd8 <- marker_tbl_cd8 %>% 
-  filter(avg_logFC > 0.25,
-         p_val_adj < 0.01,
-         pct.1 > 0.1,
-         pct.2 < 0.9,
-         !is.na(cluster_label_x),
-         cluster_label_x != "doublet.Plasma.cell")
+marker_sheet <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/T.super_marker_sheet_full.tsv")
 
-marker_tbl_top <- bind_rows(marker_tbl_top, marker_tbl_top_cd8)
+my_subtypes <- names(clrs$cluster_label_sub[[coi]])
 
-marker_sheet <- read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_marker_sheet.tsv"))
-marker_sheet_cd8 <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T.cell_marker_sheet.tsv")
-
-my_subtypes <- names(clrs$cluster_label[[coi]])
-
-my_subtypes <- c(my_subtypes, unlist(lapply(paste0("_", 1:3), function(x) paste0(my_subtypes, x)))) %>% .[!str_detect(., "doublet")]
-
-plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label"))) %>% 
-  left_join(select(meta_tbl, sample = isabl_id, patient_id, tumor_supersite, tumor_subsite, sort_parameters, therapy), 
-            by = "sample") %>% 
-  mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-"),
-         tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
-  mutate(cell_id = colnames(seu_obj_sub),
-         cluster_label = ordered(cluster_label, levels = my_subtypes),
-         ) %>% 
+plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label_sub"))) %>% 
+  left_join(meta_tbl, by = "sample") %>% 
   mutate(cell_type_super = cell_type_super_lookup[cell_type]) %>% 
   mutate(sort_short = str_remove_all(sort_parameters, "singlet, live, ")) %>% 
   mutate(sort_short_x = ifelse(sort_short == "U" & cell_type_super == "Immune", 
-                               "CD45+", ifelse(sort_short == "U" & cell_type_super == "Stromal", "CD45-", sort_short))) %>% 
-  left_join(signature_tbl, by = "patient_id")
+                               "CD45+", ifelse(sort_short == "U" & cell_type_super == "Stromal", "CD45-", sort_short)))
   
 plot_data_sub <- filter(plot_data_sub, sort_short_x == cell_sort, !is.na(tumor_supersite))
 
@@ -214,7 +140,7 @@ umap_coord_anno <- function(size) {
     coord_fixed(xlim = c(-0.3, 1), ylim = c(-0.3, 1))
 }
 
-add_umap_coord <- function(gg_obj, x = 0, y = 0, width = 0.3, height = 0.3, size = 3) {
+add_umap_coord <- function(gg_obj, x = 0, y = 0, width = 0.3, height = 0.3, size = 4.5) {
   p <- ggdraw() + 
     draw_plot(gg_obj, x = 0, y = 0, width = 1, height = 1) +
     draw_plot(umap_coord_anno(size = size), x = x, y = y, width = width, height = height)
@@ -225,11 +151,11 @@ add_umap_coord <- function(gg_obj, x = 0, y = 0, width = 0.3, height = 0.3, size
 
 ```{r chunk_60, fig.width=7, fig.height=4}
 
-umap_cell_type <- ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label)) + 
+umap_cell_type <- ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label_sub)) + 
   common_layers_disc +
-  #facet_wrap(~cluster_label) +
-  scale_color_manual(values = clrs$cluster_label[[coi]], labels = str_remove_all(names(clrs$cluster_label[[coi]]), "functional|ivated")[-4]) +
-  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1), nrow = 9))
+  #facet_wrap(~cluster_label_sub) +
+  scale_color_manual(values = clrs$cluster_label_sub[[coi]], labels = str_remove_all(names(clrs$cluster_label_sub[[coi]]), "functional|ivated")[-4]) +
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1), nrow = 12))
 
 umap_site <- ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = tumor_supersite)) + 
   common_layers_disc +
@@ -247,60 +173,60 @@ umap_site_legend <- cowplot::get_legend(umap_site)
 
 ```{r chunk_70, fig.width=15, fig.height=5}
 
-plot_data_markers <- as_tibble(FetchData(seu_obj_sub, c("cluster_label", myfeatures, unique(marker_tbl_top$gene)))) %>% 
+plot_data_markers <- as_tibble(FetchData(seu_obj_sub, c("cluster_label_sub", myfeatures, unique(marker_tbl_top$gene)))) %>% 
   gather(gene, value, -c(1:(length(myfeatures)+1))) %>% 
-  left_join(select(meta_tbl, sample = isabl_id, patient_id, tumor_supersite, tumor_subsite, sort_parameters, therapy), 
-            by = "sample") %>% 
-  mutate(tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
-  mutate(cluster_label = ordered(cluster_label, levels = my_subtypes)) %>% 
-  group_by(cluster_label, gene) %>% 
+  left_join(meta_tbl, by = "sample") %>% 
+  mutate(cluster_label_sub = ordered(cluster_label_sub, levels = my_subtypes)) %>% 
+  group_by(cluster_label_sub, gene) %>% 
   summarise(value = mean(value, na.rm = T)) %>% 
   group_by(gene) %>% 
   mutate(value = scales::rescale(value)) %>% 
-  left_join(select(marker_tbl_top, cluster_label_x, gene), by = "gene") %>% 
-  mutate(cluster_label_x = ordered(cluster_label_x, levels = rev(names(clrs$cluster_label[[coi]]))))
+  left_join(select(marker_tbl_top, cluster_label_sub_x = cluster_label_sub, gene), by = "gene") %>% 
+  mutate(cluster_label_sub_x = ordered(cluster_label_sub_x, levels = rev(names(clrs$cluster_label_sub[[coi]])))) %>% 
+  na.omit()
 
 ```
 
 ```{r chunk_75, fig.width=15, fig.height=5}
 
-highlight_genes <- bind_cols(marker_sheet, select(marker_sheet_cd8, -rank)) %>% 
+highlight_genes <- marker_tbl_top %>% 
+  group_by(cluster_label_sub) %>% 
   slice(1:2) %>% 
-  gather(cluster_label_x, gene, -rank) %>% 
-  mutate(cluster_label_x = ordered(cluster_label_x, levels = rev(names(clrs$cluster_label[[coi]])))) %>% 
-  na.omit
+  mutate(cluster_label_sub_x = ordered(cluster_label_sub, levels = rev(names(clrs$cluster_label_sub[[coi]])))) %>% 
+  ungroup() %>% 
+  select(cluster_label_sub_x, gene) %>% 
+  na.omit %>% 
+  mutate(highlight = T)
 
 plot_data_markers_mat <- plot_data_markers %>% 
-  spread(cluster_label, value) %>% 
-  left_join(highlight_genes, by = c("gene", "cluster_label_x")) %>% 
-  arrange(desc(cluster_label_x), gene) %>% 
-  select(cluster_label_x, gene, rank, everything()) %>% 
-  mutate(cluster_label_x = cluster_label_x)
+  spread(cluster_label_sub, value) %>% 
+  left_join(highlight_genes, by = c("gene", "cluster_label_sub_x")) %>% 
+  arrange(desc(cluster_label_sub_x), gene) %>% 
+  select(cluster_label_sub_x, gene, highlight, everything())
 
 ha_row <- rowAnnotation(
-  `Cell type` = plot_data_markers_mat$cluster_label_x,
-  col = list(`Cell type` = clrs$cluster_label[[coi]]),
+  `Cell type` = plot_data_markers_mat$cluster_label_sub_x,
+  col = list(`Cell type` = clrs$cluster_label_sub[[coi]]),
   show_legend = F,
   annotation_name_side = "bottom"
 )
 
 ha_col <- columnAnnotation(
   `Cell type` = colnames(plot_data_markers_mat)[-c(1:3)],
-  col = list(`Cell type` = clrs$cluster_label[[coi]]),
+  col = list(`Cell type` = clrs$cluster_label_sub[[coi]]),
   show_legend = F,
   annotation_name_side = "left",
   annotation_name_rot = 180
-  
 )
 
-gene_idx <- !is.na(plot_data_markers_mat$rank)
+gene_idx <- plot_data_markers_mat$highlight == TRUE
 
 ha_genes <- rowAnnotation(
   link = anno_mark(
-    at = which(gene_idx), 
-    labels = plot_data_markers_mat$gene[gene_idx], 
+    at = which(gene_idx),
+    labels = plot_data_markers_mat$gene[which(gene_idx)],
     labels_gp = gpar(fontsize = 10), padding = unit(1, "mm"),
-    side = "left", 
+    side = "left",
     labels_rot = 180
   )
 )
@@ -311,8 +237,8 @@ marker_heatmap <- Heatmap(
     title = "Scaled expression", 
     title_position = "leftcenter-rot"
   ),
-  row_order = 1:length(plot_data_markers_mat$cluster_label_x),
-  row_split = plot_data_markers_mat$cluster_label_x, 
+  row_order = 1:length(plot_data_markers_mat$cluster_label_sub_x),
+  row_split = plot_data_markers_mat$cluster_label_sub_x, 
   column_split = 1:length(colnames(plot_data_markers_mat)[-c(1:3)]),
   column_order = colnames(plot_data_markers_mat)[-c(1:3)], 
   column_names_side = "bottom",
@@ -333,297 +259,36 @@ marker_heatmap <- Heatmap(
 
 ### per site
 
-```{r chunk_080, fig.width=8, fig.height=4}
+```{r chunk_080, fig.width=3, fig.height=6}
 
-comp_tbl_sample_sort <- plot_data_sub %>% 
-  filter(therapy == "pre-Rx") %>% 
-  group_by(tumor_subsite, tumor_supersite, patient_id, 
-           therapy, sort_short_x, consensus_signature, cluster_label) %>% 
-  tally %>% 
-  group_by(tumor_subsite, tumor_supersite, patient_id, 
-           therapy, sort_short_x, consensus_signature) %>% 
+source("_src/comp_plot.R")
+
+comp_tbl_sample_sort <- plot_data_sub %>%
+  filter(therapy == "pre-Rx") %>%
+  group_by(sample, tumor_subsite, tumor_supersite, patient_id,
+           therapy, sort_short_x, consensus_signature, cluster_label_sub) %>%
+  tally %>%
+  group_by(sample, tumor_subsite, tumor_supersite, patient_id,
+           therapy, sort_short_x, consensus_signature) %>%
   mutate(nrel = n/sum(n)*100,
-         log10n = log10(n)) %>% 
-  ungroup %>% 
-  mutate(label_supersite = "Site",
-         label_therapy = "Rx",
-         label_mutsig = "Signature") %>% 
-  mutate(tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
-  mutate(sample_id = paste(tumor_subsite, patient_id, therapy, sort_short_x)) %>% 
-  mutate(patient_id = ordered(patient_id, levels = unique(signature_tbl$patient_id))) %>% 
-  arrange(cluster_label != "CD4.T.naive", desc(nrel)) %>% 
-  mutate(sample_id_T.cell = ordered(sample_id, levels = unique(sample_id))) %>% 
-  group_by(cluster_label, sort_short_x) %>% 
-  mutate(rank_T.cell = row_number(sample_id_T.cell)) %>% 
-  mutate(rank_T.cell = scales::rescale(rank_T.cell, c(-1, 1))) %>% 
-  ungroup %>% 
-  mutate(cell_type = "T.cell")
+         log10n = log10(n)) %>%
+  mutate(sample_id = sample) %>%
+  mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite))))
 
-comp_norm_factor_tbl <- filter(comp_tbl_sample_sort, tumor_supersite == "Adnexa") %>% 
-  group_by(cluster_label) %>% 
-  summarise(mean_nrel_norm = mean(nrel),
-            median_nrel_norm = median(nrel))
+plist <- default_comp_grid_list(
+  comp_tbl_sample_sort, cluster_label_sub, "CD4.T.naive.1",
+  cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
-comp_norm_factor_tbl_mutsig <- filter(comp_tbl_sample_sort, consensus_signature == "Undetermined", tumor_supersite != "Ascites") %>% 
-  group_by(cluster_label) %>% 
-  summarise(mean_nrel_norm = mean(nrel),
-            median_nrel_norm = median(nrel))
+comp_grid <- plot_grid(plotlist = plist, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.25, 0.35))
 
-comp_tbl_sample_sort_norm <- comp_tbl_sample_sort %>% 
-  left_join(comp_norm_factor_tbl, by = "cluster_label") %>% 
-  mutate(nrel2 = log2(nrel / median_nrel_norm)) %>% 
-  group_by(cluster_label, tumor_supersite) %>% 
-  mutate(median_nrel2 = median(nrel2)) %>% 
-  ungroup() %>% 
-  # arrange(cluster_label, tumor_supersite != "Adnexa", desc(median_nrel2)) %>% 
-  arrange(tumor_supersite) %>% 
-  mutate(x_helper = paste(cluster_label, tumor_supersite)) %>% 
-  mutate(x_helper = ordered(x_helper, levels = unique(x_helper))) %>% 
-  arrange(tumor_supersite, desc(median_nrel2)) %>% 
-  mutate(x_helper2 = paste(cluster_label, tumor_supersite)) %>% 
-  mutate(x_helper2 = ordered(x_helper2, levels = unique(x_helper)))
-
-comp_tbl_sample_sort_norm_mutsig <- comp_tbl_sample_sort %>% 
-  left_join(comp_norm_factor_tbl_mutsig, by = "cluster_label") %>% 
-  filter(tumor_supersite != "Ascites") %>% 
-  mutate(nrel2 = log2(nrel / median_nrel_norm)) %>% 
-  group_by(cluster_label, consensus_signature) %>% 
-  mutate(median_nrel2 = median(nrel2)) %>% 
-  ungroup() %>% 
-  # arrange(cluster_label, consensus_signature != "Adnexa", desc(median_nrel2)) %>% 
-  arrange(consensus_signature) %>% 
-  mutate(x_helper = paste(cluster_label, consensus_signature)) %>% 
-  mutate(x_helper = ordered(x_helper, levels = unique(x_helper))) %>% 
-  arrange(consensus_signature, desc(median_nrel2)) %>% 
-  mutate(x_helper2 = paste(cluster_label, consensus_signature)) %>% 
-  mutate(x_helper2 = ordered(x_helper2, levels = unique(x_helper)))
+comp_grid
+ggsave("_fig/004_T_cell/004_T.cell_comp.pdf", comp_grid, width = 3, height = 6)
 
 ```
 
+```{r chunk_110, fig.width=20, fig.height=8}
 
-```{r chunk_090, fig.width=7, fig.height=4}
-
-comp_plot_wrapper <- function(comp_tbl = comp_tbl_sample_sort, cts, y = "nrel", x = "tumor_subsite", fill = "cell_type", switch = NULL, facet = F, exclude_ascites = F, super_type = NULL) {
-  if (facet == F) comp_tbl <- filter(comp_tbl, !is.na(tumor_supersite))
-  if (exclude_ascites == T) comp_tbl <- filter(comp_tbl, tumor_supersite != "Ascites")
-  if (y == "nrel") ylab <- paste0("% cells")
-  if (y == "log10n") ylab <- paste0("# cells")
-  if (y == "n") ylab <- paste0("# cells")
-  p <- ggplot(filter(comp_tbl, sort_short_x == cts),
-              aes_string(x, y, fill = fill)) +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          axis.title.x = element_blank(),
-          axis.line.x = element_blank(),
-          axis.title.y = element_text(margin = margin(0, -1, 0, 1, unit = "npc")),
-          strip.text.y = element_blank(),
-          strip.background.y = element_blank(),
-          plot.margin = grid::unit(c(0.04, 0.01, 0.02, 0.01), "npc")) +
-    #scale_x_discrete(expand = c(0, 0)) +
-    labs(x = "",
-         y = ylab) +
-    guides(fill = FALSE)
-  if (fill != "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]])
-  if (fill == "cluster_label") p <- p + scale_fill_manual(values = clrs[[fill]][[super_type]])
-  if (facet == "tumor_supersite") p <- p +
-    facet_grid(sort_short_x~tumor_supersite,
-               space = "free", scales = "free", switch = switch)
-  if (facet == "consensus_signature") p <- p +
-    facet_grid(sort_short_x~consensus_signature,
-               space = "free", scales = "free", switch = switch)
-  if (facet == "patient_id_short") p <- p +
-    facet_grid(sort_short_x~patient_id_short,
-               space = "free", scales = "free", switch = switch)
-  if (facet == F) p <- p +
-    facet_grid(sort_short_x~.,
-               space = "free", scales = "free", switch = switch)
-  if (y == "nrel") p <- p +
-    geom_bar(stat = "identity", width = 1) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 50, 100),
-                       labels = c("0", "50", "100")) +
-    theme(strip.text.x = element_blank(),
-          strip.background.x = element_blank())
-  if (y == "log10n") p <- p +
-    geom_bar(stat = "identity", position = position_dodge2(preserve = "single"), width = 1) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = c(1, 2, 3),
-                       limits = c(0, 4),
-                       labels = function(x) parse(text = paste("10^", x))) +
-    expand_limits(y = c(0, 4)) +
-    theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5))
-  if (y == "n") p <- p +
-    geom_bar(stat = "identity", position = position_stack(), width = 1) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = c(0, 2500, 5000, 7500),
-                       limits = c(0, 7500),
-                       labels = c("", "2500", "5000", "7500")) +
-    expand_limits(y = c(0, 7500)) +
-    theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5),
-          plot.title = element_text(face = "plain", size = 14,
-                                    hjust = 0.5, vjust = 0.5)) +
-    labs(title = cts)
-  return(p)
-}
-
-comp_label_boxplot <- function(comp_tbl = comp_tbl_sample_sort, x = "tumor_supersite", y = "rank_T.cell", facet = T, cts = c("CD45-", "CD45+"), clr = "tumor_supersite", ct = names(clrs$cell_type), pvals = F, exclude_ascites = F) {
-  if (facet == F) comp_tbl <- filter(comp_tbl, !is.na(tumor_supersite))
-  if (exclude_ascites == T) comp_tbl <- filter(comp_tbl, tumor_supersite != "Ascites")
-  # rank_tests_sub <- filter(rank_tests, sort_short_x %in% cts, pval < 0.05) %>%
-  #   mutate(pstar = "*")
-  required_columns <- c("tumor_subsite", "tumor_supersite", "consensus_signature", "BRCA1_status", "BRCA2_status", "BRCA_status", "label_supersite", "patient_id_short", "sample_id_Myeloid.cell", "sample_id_T.cell", "rank_T.cell", "sample_id_Fibroblast", "sample_id_Ovarian.cancer.cell", "rank_Ovarian.cancer.cell", "sample_id_B.cell", "sample_id_Plasma.cell", "rank_IR", "sample_id_IR", "rank_MC", "sample_id_MC", "sample_cd45p", "sample_rank")
-  missing_columns <- required_columns[!(required_columns %in% colnames(comp_tbl))]
-  comp_tbl <- bind_cols(comp_tbl, matrix(rep("distinct_helper", n = length(missing_columns)), ncol = length(missing_columns)) %>% set_colnames(missing_columns) %>% as_tibble())
-  p <- ggplot(
-    distinct(filter(comp_tbl, therapy == "pre-Rx", sort_short_x %in% cts, cell_type %in% ct), tumor_subsite, tumor_supersite, consensus_signature, BRCA1_status, BRCA2_status, BRCA_status, label_supersite, patient_id_short, sample_id_Myeloid.cell, sample_id_T.cell, rank_T.cell, sample_id_Fibroblast, sample_id_Ovarian.cancer.cell, rank_Ovarian.cancer.cell, sample_id_B.cell, sample_id_Plasma.cell, rank_IR, sample_id_IR, rank_MC, sample_id_MC, sample_cd45p, sample_rank)
-     # distinct(filter(comp_tbl, therapy == "pre-Rx", sort_short_x %in% cts, cell_type %in% ct), -n, -log10n, -nrel)
-    ) +
-    geom_tile(aes_string(x, y, fill = clr),
-              alpha = 0.8) +
-    geom_boxplot(aes_string(x, y, fill = clr),
-                 width = 0.35, size = 2.5, color = "white", outlier.shape = NA) +
-    geom_boxplot(aes_string(x, y, color = clr),
-                 width = 0.35, size = 1, fill = "white", outlier.shape = NA) +
-    geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
-    scale_fill_manual(values = clrs[[clr]]) +
-    scale_color_manual(values = clrs[[clr]]) +
-    coord_flip(clip = "off", ylim = c(-1.01, 1.01)) +
-    theme(axis.title.y = element_blank(),
-          strip.text = element_blank(),
-          strip.background = element_blank(),
-          plot.margin = ggplot2::margin(0.04, 0.05, 0.02, 0.01, "npc")) +
-    scale_x_discrete(expand = c(0, 0)) +
-    scale_y_continuous(expand = c(0, 0), breaks = c(-1, 0, 1)) +
-    guides(fill = F, color = F) +
-    labs(y = "Scaled rank")
-  if (facet == T) p <- p + facet_grid(label_supersite~patient_id_short,
-                                      space = "free", scales = "free")
-  if (facet == F) p <- p + facet_grid(label_supersite~.,
-                                      space = "free", scales = "free")
-  if (pvals == T) p <- p +
-    geom_text(aes(x = comparison, y = 1.05, label = pstar), data = rank_tests_sub, hjust = 0.5, vjust = 1, size = 5, angle = 90) #+
-    # geom_segment(aes(x = "Adnexa", xend = comparison, y = 1.07, yend = 1.07), data = rank_tests_sub)
-  return(p)
-}
-
-```
-
-```{r chunk_092, fig.width=7, fig.height=4}
-
-comp_tbl_box_data <- comp_tbl_sample_sort %>% 
-  filter(cluster_label == "CD4.T.naive") %>% 
-  distinct(rank_T.cell, .keep_all = T) %>% 
-  mutate(cell_type = "T.cell",
-         tumor_supersite = str_replace_all(tumor_supersite, "Upper Quadrant", "UQ"))
-
-# comp_label_boxplot(comp_tbl_box_data)
-# comp_label_boxplot(comp_tbl_box_data, x = "consensus_signature", clr = "consensus_signature")
-
-pcomp1 <- comp_plot_wrapper(comp_tbl_sample_sort, cell_sort, "n", x = "sample_id_T.cell", facet = F)
-pcomp2 <- comp_plot_wrapper(comp_tbl_sample_sort, cell_sort, "nrel", x = "sample_id_T.cell", facet = F)
-
-pcomp_grid_p <- plot_grid(pcomp1, pcomp2, 
-                          comp_label_boxplot(comp_tbl_box_data),
-                          ncol = 1, align = "v", 
-                          rel_heights = c(0.3, 0.3, 0.4))
-
-```
-
-```{r chunk_095, fig.width=7, fig.height=4}
-
-wilcoxon_wrapper <- function(rank_tbl, site_y, ct) {
-  result <- tryCatch({
-    x <- filter(rank_tbl, tumor_supersite == "Adnexa", cluster_label == ct)$nrel2
-    y <- filter(rank_tbl, tumor_supersite == site_y, cluster_label == ct)$nrel2
-    wilcox.test(x = x, y = y, paired = F)$p.value
-  }, error = function(e) NA)
-  return(result)
-}
-
-site_names <- unique(comp_tbl_sample_sort_norm$tumor_supersite)
-
-wilcoxon_site_wrapper <- function(rank_tbl, ct) {
-  lapply(site_names, function(x) wilcoxon_wrapper(rank_tbl, x, ct)) %>%
-  setNames(site_names) %>% 
-  enframe("tumor_supersite", "pval") %>% 
-  unnest(cols = pval) %>% 
-  na.omit
-}
-
-cl_names <- unique(comp_tbl_sample_sort_norm$cluster_label)
-wilcoxon_tbl <- lapply(cl_names, function(y) wilcoxon_site_wrapper(comp_tbl_sample_sort_norm, y)) %>%
-  setNames(cl_names) %>% 
-  bind_rows(.id = "cluster_label") %>% 
-  mutate(plabel = ifelse(pval < pcut, "*", ""),
-         y_helper = "sig.") %>% 
-  mutate(cluster_label = ordered(cluster_label, levels = levels(cl_names)))
-
-```
-
-```{r chunk_100, fig.width=10, fig.height=5}
-
-# comp_boxplot <- ggplot(comp_tbl_sample_sort_norm, 
-#        aes(x_helper, nrel2, color = tumor_supersite)) + 
-#   geom_boxplot(outlier.shape = NA) + 
-#   geom_point(position = position_jitter(), size = 0.1) +
-#   geom_hline(yintercept = 0, color = "black", linetype = 2, size = 0.5) + 
-#   facet_grid(~cluster_label, scales = "free_x", space = "free_x", switch = "x") +
-#   scale_color_manual(values = clrs$tumor_supersite) +
-#   labs(y = "Log2 fold change\nof cell fractions",
-#        color = "Site") +
-#   theme(panel.grid.major.y = element_line(color = "grey80", linetype = 1, size = 0.25),
-#         axis.text.x = element_blank(),
-#         axis.ticks.x = element_blank(),
-#         # axis.line.x = element_blank(),
-#         axis.title.x = element_blank(),
-#         strip.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-#         strip.placement = "outside")
-# 
-# comp_boxplot_mutsig <- ggplot(comp_tbl_sample_sort_norm_mutsig, 
-#        aes(x_helper, nrel2, color = consensus_signature)) + 
-#   geom_boxplot(outlier.shape = NA) + 
-#   geom_point(position = position_jitter(), size = 0.1) +
-#   geom_hline(yintercept = 0, color = "black", linetype = 2, size = 0.5) + 
-#   facet_grid(~cluster_label, scales = "free_x", space = "free_x", switch = "x") +
-#   scale_color_manual(values = clrs$consensus_signature) +
-#   labs(y = "Log2 fold change\nof cell fractions",
-#        color = "Site") +
-#   theme(panel.grid.major.y = element_line(color = "grey80", linetype = 1, size = 0.25),
-#         axis.text.x = element_blank(),
-#         axis.ticks.x = element_blank(),
-#         # axis.line.x = element_blank(),
-#         axis.title.x = element_blank(),
-#         strip.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-#         strip.placement = "outside")
-# 
-# comp_boxplot_mutsig
-# 
-# comp_boxplot_grid <- comp_boxplot
-# 
-# if (any(wilcoxon_tbl$pval < pcut)) {
-# 
-#   comp_sig <- ggplot(left_join(comp_tbl_sample_sort_norm, 
-#                                filter(wilcoxon_tbl, pval < pcut),
-#                                by = c("cluster_label", "tumor_supersite"))) +
-#     geom_text(aes(x_helper, y_helper, label = plabel, color = tumor_supersite)) +
-#     theme_void() +
-#     facet_grid(~cluster_label, scales = "free_x", space = "free_x", switch = "x") +
-#     scale_color_manual(values = clrs$tumor_supersite) +
-#     theme(strip.background = element_blank(),
-#           strip.text = element_blank(),
-#           plot.margin = unit(c(0,0,0,0), "npc")) +
-#     guides(color = F) +
-#     coord_cartesian(clip = "off")
-#   
-#   comp_boxplot_grid <- plot_grid(comp_sig, comp_boxplot, ncol = 1, align = "v", rel_heights = c(0.02, 0.98), axis = "lr")
-# 
-# }
-
-```
-
-```{r chunk_110, fig.width=16, fig.height=4}
-
-heatmap_grob <- grid.grabExpr(draw(marker_heatmap), width = 4, height = 8)
+heatmap_grob <- grid.grabExpr(draw(marker_heatmap), width = 8, height = 16)
 vp_outer <- viewport(x = 0.5, y = 0.5, width = 0.5, height = 2, angle = 270)
 vp_inner <- viewport(x = 0.5, y = 0.5, width = 1, height = 1, angle = 0)
 grid.newpage()
@@ -632,16 +297,19 @@ grid.draw(heatmap_grob)
 popViewport(1)
 heatmap_grob_rot <- grid.grab()
 
-ggdraw() +
-  draw_plot(add_umap_coord(umap_cell_type_void, size = 2.5, x = 0),
-            x = 0, y = 0, width = 0.25, height = 1) +
+umap_heat_grid <- ggdraw() +
+  draw_plot(add_umap_coord(umap_cell_type_void, size = 3.5, x = 0),
+            x = 0, y = 0.5, width = 0.2, height = 0.5) +
+  draw_plot(add_umap_coord(umap_site_void, size = 3.5, x = 0),
+            x = 0, y = 0, width = 0.2, height = 0.5) +
   draw_grob(heatmap_grob_rot,
-            x = 0.25, y = 0, width = 0.5, height = 1) +
-  draw_plot(pcomp_grid_p,
-            x = 0.8, y = 0, width = 0.15, height = 1) +
+            x = 0.2, y = 0, width = 0.8, height = 1)
   # draw_plot_label(c("A", "B", "C", "D"), x = c(0, 0.63, 0, 0), y = c(0.995, 0.995, 0.72, 0.45))
 
-ggsave("_fig/004_T_cell/004_T.cell_umap.png", width = 16, height = 4)
+umap_heat_grid
+
+ggsave("_fig/004_T_cell/004_T.cell_umap_heat.png", umap_heat_grid, width = 20, height = 8)
+ggsave("_fig/004_T_cell/004_T.cell_umap_heat.pdf", umap_heat_grid, width = 20, height = 8)
 
 ```
 

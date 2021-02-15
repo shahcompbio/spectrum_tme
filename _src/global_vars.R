@@ -81,9 +81,11 @@ cell_type_super_lookup <- c(
   Plasma.cell = "Immune",
   T.cell = "Immune", 
   Myeloid.cell = "Immune", 
+  Mast.cell = "Immune", 
   Dendritic.cell = "Immune", 
   Endothelial.cell = "Stromal",
   Fibroblast = "Stromal", 
   Ovarian.cancer.cell = "Stromal", 
+  Ov.cancer.cell = "Stromal", 
   Other = "Other"
 )

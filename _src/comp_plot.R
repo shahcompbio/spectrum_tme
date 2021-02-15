@@ -7,7 +7,7 @@ remove_xaxis <- theme(axis.text.x = element_blank(),
 remove_guides <- guides(color = F, fill = F, shape = F, alpha = F)
 
 ## rank a comp tbl by a certain rank_column and rank_value
-rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell", fill_column = cell_type, super_type = NULL) {
+rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell", fill_column = cell_type, super_type = NULL, super_type_sub = NULL) {
   rank_column <- enquo(rank_column)
   fill_column <- enquo(fill_column)
   comp_lvl <- comp_tbl %>% 
@@ -28,7 +28,7 @@ rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell", fi
   comp_lvl <- comp_lvl %>% 
     left_join(comp_rank, by = c(as_label(rank_column), "sample_id_lvl"))
   
-  if (is.null(super_type)) {
+  if (is.null(super_type) & is.null(super_type_sub)) {
     comp_lvl <- comp_lvl %>% 
       mutate(!!rank_column := ordered(!!rank_column, levels = rev(unique(c(rank_value, names(clrs[[as_label(rank_column)]]))))))
   } 
@@ -37,9 +37,16 @@ rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell", fi
     comp_lvl <- comp_lvl %>% 
       mutate(!!rank_column := ordered(!!rank_column, levels = rev(unique(c(rank_value, names(clrs[[as_label(rank_column)]][[super_type]]))))))
   } 
+
+  if (!is.null(super_type_sub)) {
+    comp_lvl <- comp_lvl %>% 
+      mutate(!!rank_column := ordered(!!rank_column, levels = rev(unique(c(rank_value, names(clrs[[as_label(rank_column)]][[super_type_sub]]))))))
+  } 
   
   return(comp_lvl)
 }
+
+# rank_by(comp_list$Ovarian.cancer.cell, cluster_label, "Cancer.cell.5", cluster_label, super_type = "Ovarian.cancer.super") %>% View
 
 wilcoxon_wrapper <- function(comp_tbl_rank, rank_column, rank_value, 
                              test_var, test_value) {
@@ -66,7 +73,7 @@ wilcoxon_test <- function(comp_tbl_rank, rank_column, rank_value, test_var) {
 }
 
 ## composition bar plots
-plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, super_type = NULL) {
+plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, super_type = NULL, super_type_sub = NULL) {
   x <- enquo(x)
   y <- enquo(y)
   fill <- enquo(fill)
@@ -84,8 +91,9 @@ plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, su
     labs(x = "",
          y = ylab)
     if (!is.na(as_label(facet)) != F) p <- p + facet_grid(cols = vars(!!facet), space = "free_x", scales = "free_x")
-  if (as_label(fill) != "cluster_label") p <- p + scale_fill_manual(values = clrs[[as_label(fill)]])
+  if (!(as_label(fill) %in% c("cluster_label", "cluster_label_sub"))) p <- p + scale_fill_manual(values = clrs[[as_label(fill)]])
   if (as_label(fill) == "cluster_label") p <- p + scale_fill_manual(values = clrs[[as_label(fill)]][[super_type]])
+  if (as_label(fill) == "cluster_label_sub") p <- p + scale_fill_manual(values = clrs[[as_label(fill)]][[super_type_sub]])
   if (as_label(y) == "nrel") p <- p +
     scale_y_continuous(expand = c(0, 0),
                        breaks = c(0, 50, 100),
@@ -105,11 +113,15 @@ plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, su
   
 }
 
+# plot_comp_bar(rank_by(filter(comp_tbl_sample, sort_short_x == "CD45+"),
+#                       cell_type, "T cell", cell_type),
+#               sample_id_lvl, n, cell_type, facet = sort_short_x)
 
 ## composition box rank plots
-plot_comp_box <- function(comp_tbl_rank, x, y, color, rank_column, rank_value, pcut = 0.01) {
+plot_comp_box <- function(comp_tbl_rank, x, y, color, rank_column, rank_value, pcut = 0.01, facet = F, tiles_only = F) {
   x <- enquo(x)
   y <- enquo(y)
+  facet <- enquo(facet)
   color <- enquo(color)
   rank_column <- enquo(rank_column)
   comp_tbl_rank <- filter(comp_tbl_rank, !!rank_column == rank_value) %>% 
@@ -121,25 +133,46 @@ plot_comp_box <- function(comp_tbl_rank, x, y, color, rank_column, rank_value, p
   p <- ggplot(comp_tbl_rank) +
     geom_tile(aes(!!y, !!x, fill = !!color),
               alpha = 0.8) +
-    geom_boxplot(aes(!!y, !!x, fill = !!color),
-                 width = 0.35, size = 2.5, color = "white", outlier.shape = NA) +
-    geom_boxplot(aes(!!y, !!x, color = !!color),
-                 width = 0.35, size = 1, fill = "white", outlier.shape = NA) +
-    geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
     scale_fill_manual(values = clrs[[as_label(color)]]) +
     scale_color_manual(values = clrs[[as_label(color)]]) +
-    coord_flip(clip = "off", ylim = c(-1.01, 1.01)) +
+    coord_flip(clip = "off") +
     theme(axis.title.y = element_blank(),
           strip.text = element_blank(),
           strip.background = element_blank(),
           plot.margin = ggplot2::margin(0.04, 0.05, 0.02, 0.01, "npc")) +
     scale_x_discrete(expand = c(0, 0)) +
-    scale_y_continuous(expand = c(0, 0), breaks = c(-1, 0, 1)) +
-    labs(y = "Scaled rank") +
-    geom_text(aes(x = !!y, y = 1.05, label = pstar), 
-              data = wilcoxon_tbl, hjust = 0.5, vjust = 1, size = 5, angle = 90)
+    scale_y_discrete(expand = c(0, 0)) +
+    labs(y = paste0("Scaled rank\n(by % ", str_replace_all(rank_value, "\\.", " "), ")"))
+    
+  if (tiles_only == F) {
+    p <- p + 
+      geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
+      geom_boxplot(aes(!!y, !!x, fill = !!color),
+                      width = 0.35, size = 2.5, color = "white", outlier.shape = NA) +
+      geom_boxplot(aes(!!y, !!x, color = !!color),
+                   width = 0.35, size = 1, fill = "white", outlier.shape = NA) +
+      geom_text(aes(x = !!y, y = 1.05, label = pstar), 
+                data = wilcoxon_tbl, hjust = 0.5, vjust = 1, size = 5, angle = 90) +
+      coord_flip(clip = "off", ylim = c(-1.01, 1.01)) +
+      scale_y_continuous(expand = c(0, 0), breaks = c(-1, 0, 1)) +
+      labs(y = paste0("Scaled rank\n(", str_replace_all(rank_value, "\\.", " "), ")"))
+  }
+  
+  if (!is.na(as_label(facet)) != F) p <- p + facet_grid(cols = vars(!!facet), space = "free_x", scales = "free_x")
+  
   return(p)
 }
+
+
+# plot_comp_box(rank_by(filter(comp_tbl_sample, sort_short_x == "CD45+"),
+#                       cell_type, "T cell", cell_type) %>% mutate(site_helper = "Site"),
+#               sample_id_rank, tumor_supersite, tumor_supersite, cell_type, "T cell", tiles_only = F, facet = sort_short_x)
+# 
+# plot_comp_box(rank_by(filter(comp_tbl_sample, sort_short_x == "CD45+"),
+#                       cell_type, "T cell", cell_type) %>% mutate(site_helper = "Site"),
+#               sample_id_lvl, site_helper, tumor_supersite, cell_type, "T cell", tiles_only = T, facet = tumor_supersite)
+
+
 
 plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
                              vector_column, vector_value,
@@ -194,7 +227,8 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
     scale_shape_manual(values = shps[[as_label(shape)]]) +
     scale_color_manual(values = clrs[[as_label(vector_column)]]) +
     scale_x_continuous(expand = c(0, 0), breaks = c(-1, 0, 1), labels = c(-1, 0, 1)) +
-    labs(x = "Scaled rank", y = "Patient", shape = "Sample", color = "Fraction\nin non-adnexa") +
+    labs(x = paste0("Scaled rank\n(", str_replace_all(rank_value, "\\.", " "), ")"), 
+         y = "Patient", shape = "Sample", color = "Fraction\nin non-adnexa") +
     theme(axis.title.y = element_blank(),
           strip.text = element_blank(),
           plot.margin = ggplot2::margin(0.02, 0.01, 0.02, 0.01, "npc")) +
@@ -213,35 +247,55 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
 default_comp_grid_list <- function(
   comp_tbl, rank_column, rank_value, fill_column, 
   n_bar = T, nrel_bar = T, mutsig_box = T, site_box = T, vec_plot = T,
-  super_type = NULL, nmax = 10000) {
+  site_tiles = F, mutsig_tiles = F,
+  super_type = NULL, super_type_sub = NULL, nmax = 10000, facet = sort_short_x) {
   rank_column <- enquo(rank_column)
   fill_column <- enquo(fill_column)
+  facet <- enquo(facet)
   comp_tbl_rank <- rank_by(comp_tbl, !!rank_column, rank_value, !!fill_column, 
-                           super_type = super_type)
+                           super_type = super_type, super_type_sub = super_type_sub)
   plist <- list()
   if (n_bar) {
     plist$pbar1 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, n, 
                                  !!fill_column, 
-                                 facet = sort_short_x, 
+                                 facet = !!facet, 
                                  super_type = super_type,
+                                 super_type_sub = super_type_sub,
                                  nmax = nmax) +
       remove_guides
   }
   if (nrel_bar) {
     plist$pbar2 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, nrel, 
-                                 !!fill_column, facet = sort_short_x, 
-                                 super_type = super_type) +
+                                 !!fill_column, facet = !!facet, 
+                                 super_type = super_type,
+                                 super_type_sub = super_type_sub) +
       remove_guides
   }
   if (mutsig_box) {
     plist$pbox1 <- plot_comp_box(comp_tbl_rank, sample_id_rank, consensus_signature, 
-                                 consensus_signature, !!rank_column, rank_value) + 
+                                 consensus_signature, !!rank_column, rank_value, 
+                                 facet = !!facet) + 
       remove_guides
+  }
+  if (mutsig_tiles) {
+    plist$ptiles1 <- plot_comp_box(comp_tbl_rank, sample_id_lvl, label_mutsig, 
+                                   consensus_signature, !!rank_column, rank_value, 
+                                   facet = !!facet,
+                                   tiles_only = T) + 
+      remove_guides + remove_xaxis
   }
   if (site_box) {
     plist$pbox2 <- plot_comp_box(comp_tbl_rank, sample_id_rank, tumor_supersite, 
-                                 tumor_supersite, !!rank_column, rank_value) + 
+                                 tumor_supersite, !!rank_column, rank_value, 
+                                 facet = !!facet) + 
       remove_guides
+  }
+  if (site_tiles) {
+    plist$ptiles2 <- plot_comp_box(comp_tbl_rank, sample_id_lvl, label_supersite, 
+                                   tumor_supersite, !!rank_column, rank_value, 
+                                   facet = !!facet, 
+                                   tiles_only = T) + 
+      remove_guides + remove_xaxis
   }
   if (vec_plot) {
     plist$pvec <- plot_comp_vector(comp_tbl_rank, sample_id_rank, patient_id_short,

@@ -85,6 +85,11 @@ seu_tbl_full <- seu_tbl %>%
 source("_src/comp_plot.R")
 # rank_by()
 
+add_helper_columns <- . %>% 
+  mutate(label_supersite = "Site",
+         label_therapy = "Rx",
+         label_mutsig = "Signature")
+
 comp_tbl_sample <- seu_tbl_full %>%
   filter(therapy == "pre-Rx", cell_type != "Other") %>%
   group_by(tumor_subsite, tumor_supersite, tumor_megasite, patient_id_short,
@@ -93,9 +98,7 @@ comp_tbl_sample <- seu_tbl_full %>%
   group_by(tumor_subsite, tumor_supersite, tumor_megasite, patient_id_short,
            therapy, sort_short_x, consensus_signature) %>%
   mutate(nrel = n/sum(n)*100) %>% 
-  mutate(label_supersite = "Site",
-         label_therapy = "Rx",
-         label_mutsig = "Signature") %>%
+  add_helper_columns %>% 
   mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite)))) %>%
   mutate(sample_id = paste(tumor_subsite, patient_id_short, therapy, sort_short_x)) %>%
   group_by(sample_id) %>% 
@@ -113,6 +116,7 @@ comp_tbl_consOV <- seu_tbl_full %>%
            therapy, sort_short_x, consensus_signature) %>%
   mutate(nrel = n/sum(n)*100,
          log10n = log10(n)) %>% 
+  add_helper_columns %>% 
   mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite)))) %>%
   mutate(sample_id = paste(tumor_subsite, patient_id_short, therapy, sort_short_x)) %>%
   ungroup
@@ -319,6 +323,138 @@ for(i in 1:length(tcga_subtypes)){
 
 ```
 
+## cell state {.tabset}
+
+```{r chunk_090, fig.width=3, fig.height=12}
+
+cois <- c("T.super", "Myeloid.super", "Fibroblast.super", "Ovarian.cancer.cell")
+
+read_comp_wrapper <- function(x, cluster_column) {
+  cluster_column <- enquo(cluster_column)
+  read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", x, "_subtype_compositions.tsv")) %>% 
+    mutate(sort_short_x = ifelse(str_detect(sample_id_x, "CD45\\+"), "CD45+", "CD45-")) %>%
+    complete(sample, !!cluster_column, fill = list(n = 0, nrel = 0)) %>% 
+    left_join(meta_tbl, by = "sample") %>% 
+    arrange(sample, sample_id_x, !!cluster_column) %>% 
+    group_by(sample) %>% 
+    mutate(sample_id_x = ifelse(is.na(sample_id_x), sample_id_x[1], sample_id_x)) %>% 
+    mutate(sort_short_x = ifelse(is.na(sort_short_x), sort_short_x[1], sort_short_x)) %>% 
+    mutate(nsum = ifelse(is.na(nsum), nsum[1], nsum)) %>% 
+    ungroup %>% 
+    mutate(sample_id = sample_id_x)
+}
+
+comp_list <- lapply(cois[-1], read_comp_wrapper, cluster_label) %>% setNames(cois[-1])
+comp_list$T.super <- read_comp_wrapper("T.super", cluster_label_sub)
+
+```
+
+### T/NK cells {.tabset}
+
+```{r chunk_100, fig.width=3.5, fig.height=10, results="asis"}
+
+T.super.clusters <- sort(unique(comp_list$T.super$cluster_label_sub))
+
+for(i in 1:length(T.super.clusters)){
+  
+  cat('#### ', T.super.clusters[i],' \n')
+  
+  plist <- default_comp_grid_list(
+    filter(comp_list$T.super, sort_short_x == "CD45+"), 
+    cluster_label_sub, T.super.clusters[i], cluster_label_sub, 
+    super_type_sub = "T.super")
+  
+  p <- plot_grid(plotlist = plist, ncol = 1, align = "v",
+                 rel_heights = c(0.14, 0.14, 0.14, 0.14, 0.44))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
+
+```
+
+### Myeloid cells {.tabset}
+
+```{r chunk_110, fig.width=3.5, fig.height=10, results="asis"}
+
+Myeloid.super.clusters <- sort(unique(comp_list$Myeloid.super$cluster_label))
+
+for(i in 1:length(Myeloid.super.clusters)){
+  
+  cat('#### ', Myeloid.super.clusters[i],' \n')
+  
+  plist <- default_comp_grid_list(
+    filter(comp_list$Myeloid.super, sort_short_x == "CD45+"), 
+    cluster_label, Myeloid.super.clusters[i], cluster_label, 
+    super_type = "Myeloid.super")
+  
+  p <- plot_grid(plotlist = plist, ncol = 1, align = "v",
+                 rel_heights = c(0.14, 0.14, 0.14, 0.14, 0.44))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
+
+
+```
+
+### Fibroblasts {.tabset}
+
+```{r chunk_120, fig.width=3.5, fig.height=10, results="asis"}
+
+Fibroblast.super.clusters <- sort(unique(comp_list$Fibroblast.super$cluster_label))[-3]
+
+for(i in 1:length(Fibroblast.super.clusters)){
+  
+  cat('#### ', Fibroblast.super.clusters[i],' \n')
+  
+  plist <- default_comp_grid_list(
+    filter(comp_list$Fibroblast.super, sort_short_x == "CD45-"), 
+    cluster_label, Fibroblast.super.clusters[i], cluster_label, 
+    super_type = "Fibroblast.super")
+  
+  p <- plot_grid(plotlist = plist, ncol = 1, align = "v",
+                 rel_heights = c(0.14, 0.14, 0.14, 0.14, 0.44))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
+
+```
+
+### Cancer cells {.tabset}
+
+```{r chunk_130, fig.width=3.5, fig.height=10, results="asis"}
+
+Cancer.super.clusters <- sort(unique(comp_list$Ovarian.cancer.cell$cluster_label))[5]
+
+for(i in 1:length(Cancer.super.clusters)){
+  
+  cat('#### ', Cancer.super.clusters[i],' \n')
+  
+  plist <- default_comp_grid_list(
+    filter(comp_list$Ovarian.cancer.cell, sort_short_x == "CD45-"), 
+    cluster_label, Cancer.super.clusters[i], cluster_label, 
+    super_type = "Ovarian.cancer.super")
+  
+  p <- plot_grid(plotlist = plist, ncol = 1, align = "v",
+                 rel_heights = c(0.14, 0.14, 0.14, 0.14, 0.44))
+  
+  print(p)
+  
+  cat(' \n \n')
+  
+}
+
+```
+
+
 # mpIF composition {.tabset}
 
 ```{r chunk_140, fig.width=6, fig.height=3}
@@ -413,7 +549,8 @@ mpif_cell_state_expanded <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell
   select(cell_id, slide_id, fov_id, compartment, cell_type, cell_state, contains("state")) %>%
   left_join(select(mpif_meta_tbl, slide_id, patient_id_short, tumor_supersite, tumor_subsite, therapy, sample_id, consensus_signature, tumor_megasite), by = "slide_id") %>%
   na.omit() %>% 
-  mutate(sort_short_x = compartment)
+  mutate(sort_short_x = compartment) %>% 
+  mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite))))
 
 ## cell state composition fov lvl
 mpif_cell_state_n <- mpif_cell_state_expanded %>%
@@ -421,7 +558,8 @@ mpif_cell_state_n <- mpif_cell_state_expanded %>%
   tally() %>%
   group_by(patient_id_short, tumor_supersite, tumor_subsite, tumor_megasite, therapy, sample_id, fov_id, consensus_signature) %>%
   mutate(nrel = n/sum(n)) %>%
-  ungroup()
+  ungroup() %>% 
+  add_helper_columns
 
 ## cell state composition slide lvl
 mpif_cell_state_n_slide <- mpif_cell_state_expanded %>%
@@ -429,7 +567,8 @@ mpif_cell_state_n_slide <- mpif_cell_state_expanded %>%
   tally() %>%
   group_by(patient_id_short, tumor_supersite, tumor_subsite, tumor_megasite, therapy, sample_id, consensus_signature) %>%
   mutate(nrel = n/sum(n)) %>%
-  ungroup()
+  ungroup() %>% 
+  add_helper_columns
 
 ## cell state composition slide lvl compartment
 mpif_cell_state_n_slide_compartment <- mpif_cell_state_expanded %>%
@@ -437,7 +576,17 @@ mpif_cell_state_n_slide_compartment <- mpif_cell_state_expanded %>%
   tally() %>%
   group_by(patient_id_short, tumor_supersite, tumor_subsite, tumor_megasite, therapy, sample_id, consensus_signature, sort_short_x) %>%
   mutate(nrel = n/sum(n)*100) %>%
-  ungroup()
+  ungroup() %>% 
+  add_helper_columns
+
+## cell type composition slide lvl compartment
+mpif_cell_type_n_slide_compartment <- mpif_cell_state_expanded %>%
+  group_by(patient_id_short, tumor_supersite, tumor_subsite, tumor_megasite, therapy, sample_id, consensus_signature, sort_short_x, cell_type) %>%
+  tally() %>%
+  group_by(patient_id_short, tumor_supersite, tumor_subsite, tumor_megasite, therapy, sample_id, consensus_signature, sort_short_x) %>%
+  mutate(nrel = n/sum(n)*100) %>%
+  ungroup() %>% 
+  add_helper_columns
 
 ```
 
@@ -832,39 +981,51 @@ plot_grid(p1, p2, ncol = 1)
 
 plist1 <- default_comp_grid_list(
   filter(comp_tbl_sample, sort_short_x == "CD45-"), 
-  cell_type, "Ov cancer cell", cell_type, mutsig_box = T)
+  cell_type, "Ov cancer cell", cell_type)
 plist1$empty <- ggdraw()
 
 plist2 <- default_comp_grid_list(
   filter(comp_tbl_sample, sort_short_x == "CD45+"), 
-  cell_type, "T cell", cell_type, mutsig_box = T)
+  cell_type, "T cell", cell_type)
 plist2$empty <- ggdraw()
 
 plist3 <- default_comp_grid_list(
   filter(mpif_cell_state_n_slide_compartment, sort_short_x == "Tumor"), 
-  cell_type, "CD8+", cell_state, mutsig_box = T, nmax = 250000)
+  cell_type, "CD8+", cell_state, nmax = 250000)
 plist3$empty <- ggdraw()
 
 plist4 <- default_comp_grid_list(
   filter(mpif_cell_state_n_slide_compartment, sort_short_x == "Stroma"), 
-  cell_type, "CD8+", cell_state, mutsig_box = T, nmax = 250000)
+  cell_type, "CD8+", cell_state, nmax = 250000)
 plist4$empty <- ggdraw()
 
+plist5 <- default_comp_grid_list(
+  filter(mpif_cell_type_n_slide_compartment, sort_short_x == "Tumor"), 
+  cell_type, "CD8+", cell_type, nmax = 250000)
+plist5$empty <- ggdraw()
+
+plist6 <- default_comp_grid_list(
+  filter(mpif_cell_type_n_slide_compartment, sort_short_x == "Stroma"), 
+  cell_type, "CD8+", cell_type, nmax = 250000)
+plist6$empty <- ggdraw()
+
+## cell type grid incl mut sig
 pcomp1 <- plot_grid(plotlist = plist1, ncol = 1, align = "v",
-                    rel_heights = c(0.11, 0.11, 0.11, 0.11, 0.56, 0))
+                    rel_heights = c(0.11, 0.11, 0.13, 0.13, 0.52, 0))
 
 pcomp2 <- plot_grid(plotlist = plist2, ncol = 1, align = "v",
-                    rel_heights = c(0.11, 0.11, 0.11, 0.11, 0.56, 0))
+                    rel_heights = c(0.11, 0.11, 0.13, 0.13, 0.52, 0))
 
-pcomp3 <- plot_grid(plotlist = plist3, ncol = 1, align = "v",
-                    rel_heights = c(0.11, 0.11, 0.11, 0.11, 0.29, 0.25))
+pcomp3 <- plot_grid(plotlist = plist5, ncol = 1, align = "v",
+                    rel_heights = c(0.11, 0.11, 0.13, 0.13, 0.27, 0.25))
 
-pcomp4 <- plot_grid(plotlist = plist4, ncol = 1, align = "v",
-                    rel_heights = c(0.11, 0.11, 0.11, 0.11, 0.29, 0.25))
+pcomp4 <- plot_grid(plotlist = plist6, ncol = 1, align = "v",
+                    rel_heights = c(0.11, 0.11, 0.13, 0.13, 0.27, 0.25))
 
-gcomp1 <- plot_grid(pcomp1, pcomp2, pcomp3, pcomp4, ncol = 4)
+gcomp1 <- plot_grid(pcomp1, pcomp2, ggdraw(), pcomp3, pcomp4, ncol = 5,
+                    rel_widths = c(0.245, 0.245, 0.02, 0.245, 0.245))
 
-
+## cell state grid without mutsig
 pcomp1 <- plot_grid(plotlist = plist1[-3], ncol = 1, align = "v",
                     rel_heights = c(0.13, 0.13, 0.16, 0.58, 0))
 
@@ -880,6 +1041,23 @@ pcomp4 <- plot_grid(plotlist = plist4[-3], ncol = 1, align = "v",
 gcomp2 <- plot_grid(pcomp1, pcomp2, ggdraw(), pcomp3, pcomp4, ncol = 5, 
                     rel_widths = c(0.245, 0.245, 0.02, 0.245, 0.245))
 
+## cell type grid without mutsig
+pcomp1 <- plot_grid(plotlist = plist1[-3], ncol = 1, align = "v",
+                    rel_heights = c(0.13, 0.13, 0.16, 0.58, 0))
+
+pcomp2 <- plot_grid(plotlist = plist2[-3], ncol = 1, align = "v",
+                    rel_heights = c(0.13, 0.13, 0.16, 0.58, 0))
+
+pcomp3 <- plot_grid(plotlist = plist5[-3], ncol = 1, align = "v",
+                    rel_heights = c(0.13, 0.13, 0.16, 0.32, 0.26))
+
+pcomp4 <- plot_grid(plotlist = plist6[-3], ncol = 1, align = "v",
+                    rel_heights = c(0.13, 0.13, 0.16, 0.32, 0.26))
+
+gcomp3 <- plot_grid(pcomp1, pcomp2, ggdraw(), pcomp3, pcomp4, ncol = 5, 
+                    rel_widths = c(0.245, 0.245, 0.02, 0.245, 0.245))
+
+
 mpif_state_legend <- get_legend(plot_comp_bar(
   rank_by(filter(mpif_cell_state_n_slide_compartment, sort_short_x == "Tumor"),
           cell_type, "CD8+", cell_state),
@@ -887,6 +1065,14 @@ mpif_state_legend <- get_legend(plot_comp_bar(
   scale_color_manual(values = c(Adnexa = "#ff0000", Other = "#56B4E9"), labels = c("Enriched", "Depleted", "")) + 
   labs(fill = "mpIF cell state") +
   guides(fill = guide_legend(ncol = 2)))
+
+mpif_cell_type_legend <- get_legend(plot_comp_bar(
+  rank_by(filter(mpif_cell_type_n_slide_compartment, sort_short_x == "Tumor"),
+          cell_type, "CD8+", cell_type),
+  sample_id_lvl, nrel, cell_type, facet = "sort_short_x") +
+  scale_color_manual(values = c(Adnexa = "#ff0000", Other = "#56B4E9"), labels = c("Enriched", "Depleted", "")) + 
+  labs(fill = "mpIF cell state") +
+  guides(fill = guide_legend(ncol = 1)))
 
 vec_legend_helper <- plot_comp_vector(
   rank_by(filter(comp_tbl_sample, sort_short_x == "CD45+"),
@@ -979,7 +1165,28 @@ cor_plot_grid <- plot_grid(plotlist = cor_plot_list, ncol = 1, align = "hv")
 
 ```
 
-```{r chunk_270, fig.width=16, fig.height=8}
+```{r chunk_270, fig.width=12, fig.height=10}
+
+comp_grid_full <- ggdraw() +
+  draw_plot(gcomp1, x = 0, y = 0, width = 1, height = 1) +
+  draw_grob(vec_legend_shape, x = 0.54, y = 0.125, vjust = 0.5, hjust = 0) +
+  draw_grob(vec_legend_color, x = 0.68, y = 0.115, vjust = 0.5, hjust = 0) +
+  draw_grob(mpif_cell_type_legend, x = 0.84, y = 0.105, vjust = 0.5, hjust = 0)
+  # draw_plot(cor_plot_grid, x = 0.68, y = 0.21, width = 0.35, height = 0.75) +
+  # draw_label("Tumor", x = 0.815, y = 0.98) +
+  # draw_label("Stroma", x = 0.91, y = 0.98)
+
+comp_grid_full
+
+ggsave(filename = "_fig/002_cohort/002_comp_grid_site_mutsig.pdf", comp_grid_full, 
+       width = 12, height = 10)
+
+ggsave(filename = "_fig/002_cohort/002_comp_grid_site_mutsig.png", comp_grid_full, 
+       width = 12, height = 10)
+
+```
+
+```{r chunk_280, fig.width=16, fig.height=8}
 
 comp_grid_full <- ggdraw() +
   draw_plot(gcomp2, x = 0, y = 0, width = 0.69, height = 1) +
@@ -1000,11 +1207,135 @@ ggsave(filename = "_fig/002_cohort/002_comp_grid_site.png", comp_grid_full,
 
 ```
 
+```{r chunk_290, fig.width=12, fig.height=8}
+
+comp_grid_full <- ggdraw() +
+  draw_plot(gcomp3, x = 0, y = 0, width = 1, height = 1) +
+  draw_grob(vec_legend_shape, x = 0.54, y = 0.125, vjust = 0.5, hjust = 0) +
+  draw_grob(vec_legend_color, x = 0.68, y = 0.115, vjust = 0.5, hjust = 0) +
+  draw_grob(mpif_cell_type_legend, x = 0.84, y = 0.105, vjust = 0.5, hjust = 0)
+  # draw_plot(cor_plot_grid, x = 0.68, y = 0.21, width = 0.35, height = 0.75) +
+  # draw_label("Tumor", x = 0.815, y = 0.98) +
+  # draw_label("Stroma", x = 0.91, y = 0.98)
+
+comp_grid_full
+
+ggsave(filename = "_fig/002_cohort/002_comp_grid_site_cell_type.pdf", comp_grid_full, 
+       width = 12, height = 8)
+
+ggsave(filename = "_fig/002_cohort/002_comp_grid_site_cell_type.png", comp_grid_full, 
+       width = 12, height = 8)
+
+```
 
 # Supplementary figure
 
-```{r chunk_300, fig.width=12, fig.height=6}
+```{r chunk_300, fig.width=20, fig.height=12}
+
+## scrna per patient comps
+plist1 <- default_comp_grid_list(
+  filter(comp_tbl_sample, sort_short_x == "CD45-"), 
+  cell_type, "Ov cancer cell", cell_type, facet = patient_id_short, 
+  site_box = F, vec_plot = F, mutsig_box = F, site_tiles = T, mutsig_tiles = T)
+
+plist2 <- default_comp_grid_list(
+  filter(comp_tbl_sample, sort_short_x == "CD45+"), 
+  cell_type, "T cell", cell_type, facet = patient_id_short, 
+  site_box = F, vec_plot = F, mutsig_box = F, site_tiles = T, mutsig_tiles = T)
+
+cd45n_lvls <- comp_tbl_sample %>% 
+  filter(sort_short_x == "CD45-") %>% 
+  rank_by(cell_type, "T cell", cell_type) %>% 
+  distinct(sample_id, sample_id_lvl)
+
+cd45p_lvls <- comp_tbl_sample %>% 
+  filter(sort_short_x == "CD45+") %>% 
+  rank_by(cell_type, "Ov cancer cell", cell_type) %>% 
+  distinct(sample_id, sample_id_lvl)
+
+pbar_txga1 <- comp_tbl_consOV %>% 
+  filter(sort_short_x == "CD45-") %>% 
+  left_join(cd45n_lvls, by = "sample_id") %>% 
+  plot_comp_bar(sample_id_lvl, nrel, consensusOV, facet = patient_id_short) +
+  guides(fill = F)
+
+pbar_txga2 <- comp_tbl_consOV %>% 
+  filter(sort_short_x == "CD45+") %>% 
+  left_join(cd45p_lvls, by = "sample_id") %>% 
+  plot_comp_bar(sample_id_lvl, nrel, consensusOV, facet = patient_id_short) +
+  guides(fill = F)
 
 
+pgrid_supplement1 <- plot_grid(plist1$pbar1 + 
+                                 theme(strip.text.x = element_text(angle = 90)), 
+                               plist1$pbar2 + labs(y = "% cells\n(cell type)"), 
+                               pbar_txga1 + labs(y = "% cells\n(TCGA)"),
+                               plist1$ptiles2, plist1$ptiles1,
+                               ncol = 1, align = "v", axis = "x",
+                               rel_heights = c(0.3, 0.3, 0.3, 0.05, 0.05))
+
+pgrid_supplement2 <- plot_grid(plist2$pbar1 + 
+                                 theme(strip.text.x = element_text(angle = 90)), 
+                               plist2$pbar2 + labs(y = "% cells\n(cell type)"), 
+                               pbar_txga2 + labs(y = "% cells\n(TCGA)"),
+                               plist2$ptiles2, plist2$ptiles1,
+                               ncol = 1, align = "v", axis = "x",
+                               rel_heights = c(0.3, 0.3, 0.3, 0.05, 0.05))
+
+## mpif per patient comps
+mpif_lvls <- mpif_cell_type_n_slide_compartment %>% 
+  rank_by(cell_type, "CD8+", cell_type) %>% 
+  distinct(sample_id, sample_id_lvl)
+
+plist_mpif <- default_comp_grid_list(
+  filter(mpif_cell_type_n_slide_compartment), 
+  cell_type, "CD8+", cell_type, facet = patient_id_short, nmax = 750000,
+  site_box = F, vec_plot = F, mutsig_box = F, site_tiles = T, mutsig_tiles = T)
+
+pbar_mpif_tumor <- mpif_cell_type_n_slide_compartment %>% 
+  filter(sort_short_x == "Tumor") %>% 
+  left_join(mpif_lvls, by = "sample_id") %>% 
+  mutate(cell_type = ordered(cell_type, levels = unique(c("CD8+", names(clrs$cell_type))))) %>% 
+  plot_comp_bar(sample_id_lvl, nrel, cell_type, nmax = 750000, 
+                facet = patient_id_short) +
+  guides(fill = F) +
+  labs(y = "% cells\n(Tumor)")
+
+pbar_mpif_stroma <- mpif_cell_type_n_slide_compartment %>% 
+  filter(sort_short_x == "Stroma") %>% 
+  left_join(mpif_lvls, by = "sample_id") %>% 
+  mutate(cell_type = ordered(cell_type, levels = unique(c("CD8+", names(clrs$cell_type))))) %>% 
+  plot_comp_bar(sample_id_lvl, nrel, cell_type, nmax = 750000, 
+                facet = patient_id_short) +
+  guides(fill = F) +
+  labs(y = "% cells\n(Stroma)")
+
+
+pgrid_supplement3 <- plot_grid(plist_mpif$pbar1 + 
+                                 theme(strip.text.x = element_text(angle = 90)) +
+                                 labs(y = "# cells\n"), 
+                               pbar_mpif_tumor, pbar_mpif_stroma,
+                               plist_mpif$ptiles2, plist_mpif$ptiles1,
+                               ncol = 1, align = "v", axis = "x",
+                               rel_heights = c(0.3, 0.3, 0.3, 0.05, 0.05))
+
+## all compositions plots combined combined
+pgrid_supplement_full <- plot_grid(
+  plot_grid(pgrid_supplement1, ggdraw(), nrow = 1, rel_widths = c(1, 0)), 
+  ggdraw(), 
+  plot_grid(pgrid_supplement2, ggdraw(), nrow = 1, rel_widths = c(1, 0)), 
+  ggdraw(),
+  plot_grid(pgrid_supplement3, ggdraw(), nrow = 1, rel_widths = c(0.55, 0.45)), 
+  ncol = 1, 
+  rel_heights = c(0.3, 0.05, 0.3, 0.05, 0.3))
+
+pgrid_supplement_full
+
+ggsave(filename = "_fig/002_cohort/002_comp_grid_per_patient.pdf", 
+       pgrid_supplement_full, width = 20, height = 12)
+ggsave(filename = "_fig/002_cohort/002_comp_grid_per_patient.png", 
+       pgrid_supplement_full, width = 20, height = 12)
 
 ```
+
+

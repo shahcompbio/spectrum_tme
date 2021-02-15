@@ -146,7 +146,7 @@ umap_pca_cluster <- base_umap +
   geom_point(aes(umappca_1, umappca_2, color = cluster_label), 
              size = pt.size, alpha = pt.alpha) +
   geom_text(aes(umappca_1, umappca_2, label = patient_id_short), data = median_tbl) + 
-  scale_color_manual(values = clrs$cluster_label$Ovarian.cancer.cell) +
+  scale_color_manual(values = clrs$cluster_label$Ovarian.cancer.super) +
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 1, 
                               label.position = "right")) +
@@ -155,7 +155,7 @@ umap_pca_cluster <- base_umap +
 umap_cluster <- base_umap + 
   geom_point(aes(umapharmony_1, umapharmony_2, color = cluster_label), 
              size = pt.size2, alpha = pt.alpha) +
-  scale_color_manual(values = clrs$cluster_label$Ovarian.cancer.cell) +
+  scale_color_manual(values = clrs$cluster_label$Ovarian.cancer.super) +
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 1, 
                               label.position = "right")) +
@@ -188,7 +188,7 @@ umap_jak_stat <- base_umap +
 
 ```
 
-```{r chunk_063, fig.width=20, fig.height=5}
+```{r chunk_063, fig.width=4, fig.height=5}
 
 source("_src/comp_plot.R")
 
@@ -204,12 +204,12 @@ cluster_comp <- plot_data %>%
 
 plist <- default_comp_grid_list(filter(cluster_comp, sort_short_x == "CD45-"),
                                 cluster_label, "Cancer.cell.3", cluster_label,
-                                vec_plot = F, site_box = F, 
-                                super_type = "Ovarian.cancer.cell")
+                                vec_plot = F, site_box = T, 
+                                super_type = "Ovarian.cancer.super")
 
 pcomp_grid_p_full <- plot_grid(plotlist = plist,
                                ncol = 1, align = "v",
-                               rel_heights = c(0.25, 0.25, 0.4))
+                               rel_heights = c(0.2, 0.2, 0.24, 0.36))
 
 pcomp_grid_p_full
 
@@ -231,7 +231,7 @@ cancer_grid <- ggdraw() +
   draw_plot(add_umap_coord(umap_cluster + guides(color = F)), 
             x = 0.25, y = 0, width = 0.25, height = 1) +
   draw_plot(pcomp_grid_p_full,
-            x = 0.5, y = 0, width = 0.18, height = 1) +
+            x = 0.5, y = 0, width = 0.17, height = 1.02) +
   draw_plot(add_umap_coord(umap_jak_stat), x = 0.7, y = 0, width = 0.25, height = 1)
 
 cancer_grid_pca
@@ -300,7 +300,7 @@ plot_data_summary_mutsig_patient <- plot_data %>%
 
 ```
 
-```{r chunk_100, fig.width=15, fig.height=10}
+```{r chunk_100, fig.width=14, fig.height=5}
 
 common_heat_layers <- list(
   scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
@@ -308,7 +308,7 @@ common_heat_layers <- list(
                        breaks = c(-cut_value, 0, cut_value), 
                        labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
                        limits = c(-cut_value, cut_value)),
-  theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.ticks = element_blank(),
         axis.line = element_blank(),
         axis.title = element_blank(),
@@ -335,15 +335,15 @@ pw_plot1 <- ggplot(mutate(plot_data_summary_cluster, facet_helper = "")) +
   facet_grid(~facet_helper, scales = "free", space = "free") + 
   labs(x = "Cluster", y = "Pathway", fill = "Mean\nPROGENy\nscore") +
   scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
-                       na.value = "grey10", 
-                       breaks = c(-cut_value, 0, cut_value), 
-                       labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value))) +
+                       # labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
+                       # breaks = c(-cut_value, 0, cut_value), 
+                       na.value = "grey10") +
   theme(axis.text.x = element_blank())
 
 pw_plot1_anno <- ggplot(mutate(plot_data_summary_cluster, facet_helper = "")) +
   geom_tile(aes(cluster_label, facet_helper, fill = cluster_label)) +
   common_heat_layers + 
-  scale_fill_manual(values = clrs$cluster_label$Ovarian.cancer.cell %>% setNames(str_remove_all(names(.), "\\.cell"))) +
+  scale_fill_manual(values = clrs$cluster_label$Ovarian.cancer.super %>% setNames(str_remove_all(names(.), "\\.cell"))) +
   facet_grid(~facet_helper, scales = "free", space = "free") +
   theme(axis.text.y = element_blank(),
         strip.text = element_blank()) +
@@ -356,6 +356,7 @@ pw_plot2 <- ggplot(plot_data_summary_mutsig_patient) +
   labs(x = "Patient", y = "", fill = "Mean\nPROGENy\nscore") +
   theme(axis.text.x = element_blank())
 
+
 pw_plot2_anno <- ggplot(mutate(plot_data_summary_mutsig_patient, facet_helper = "")) +
   geom_tile(aes(patient_id_short, facet_helper, fill = consensus_signature)) +
   common_heat_layers + 
@@ -365,28 +366,42 @@ pw_plot2_anno <- ggplot(mutate(plot_data_summary_mutsig_patient, facet_helper = 
         strip.text = element_blank()) +
   guides(fill = F)
 
-pw_grid <- plot_grid(pw_plot1 + guides(fill = F), ggdraw(), pw_plot2 + guides(fill = F), 
-                     pw_plot1_anno, ggdraw(), pw_plot2_anno,
-                     nrow = 2, align = "v", axis = "lrtb",
-                     rel_widths = c(0.25, 0.05, 0.7), rel_heights = c(0.7, 0.3))
+pw_grid_left <- plot_grid(pw_plot1, pw_plot1_anno, ggdraw(),
+                          ncol = 1, align = "v", axis = "lrtb",
+                          rel_heights = c(0.65, 0.35, 0))
+
+pw_grid_right <- plot_grid(pw_plot2, pw_plot2_anno, ggdraw(),
+                           ncol = 1, align = "v", axis = "lrtb",
+                           rel_heights = c(0.7, 0.1, 0.2))
 
 pw_boxplot <- filter(plot_data, pathway == "JAK.STAT") %>%
   mutate(patient_id_short = ordered(patient_id_short, levels = unique(arrange(plot_data_summary_mutsig_patient, pathway != "JAK.STAT", median_score)$patient_id_short))) %>% 
   ggplot() +
   geom_boxplot(aes(patient_id_short, score, color = consensus_signature)) +
   scale_color_manual(values = clrs$consensus_signature) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1)) +
-  labs(x = "Patient", y = "JAK/STAT pathway\nPROGENy score")
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(x = "", y = "")
+
+pw_boxplot_mutsig <- filter(plot_data, pathway == "JAK.STAT") %>% 
+  ggplot() +
+  geom_boxplot(aes(consensus_signature, score, color = consensus_signature)) +
+  scale_color_manual(values = clrs$consensus_signature) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(x = "", y = "JAK/STAT pathway\nPROGENy score")
+
+plot_box_grid <- plot_grid(pw_boxplot_mutsig + guides(color = F), 
+                           pw_boxplot + guides(color = F), 
+                           nrow = 1, align = "h", 
+                           rel_widths = c(c(0.23, 0.77)))
 
 pw_grid_full <- ggdraw() +
-  draw_plot(pw_grid, x = 0, y = 0.5, width = 0.9, height = 0.5) +
-  draw_grob(get_legend(pw_plot2), x = 0.92, y = 0.25) +
-  draw_plot(pw_boxplot + guides(color = F), x = 0, y = 0, width = 0.65, height = 0.45)
+  draw_plot(pw_grid_left, x = 0, y = 0, width = 0.33, height = 1) +
+  draw_plot(plot_box_grid, x = 0.35, y = 0.1, width = 0.65, height = 0.75)
 
 pw_grid_full
 
-ggsave("_fig/003_cancer_cell/003_pathway_heatmap.pdf", pw_grid_full, 
-       width = 15, height = 10)
+ggsave("_fig/003_cancer_cell/003_pathway_heatmap_boxplot.pdf", pw_grid_full, 
+       width = 14, height = 5)
 
 ```
 
