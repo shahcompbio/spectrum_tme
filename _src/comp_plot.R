@@ -61,7 +61,7 @@ wilcoxon_wrapper <- function(comp_tbl_rank, rank_column, rank_value,
   return(result)
 }
 
-wilcoxon_test <- function(comp_tbl_rank, rank_column, rank_value, test_var) {
+wilcoxon_test <- function(comp_tbl_rank, rank_column, rank_value, test_var, pcut = 0.01) {
   test_var <- enquo(test_var)
   rank_column <- enquo(rank_column)
   comp_tbl_rank <- distinct(comp_tbl_rank, sample_id_lvl, .keep_all = T)
@@ -69,7 +69,14 @@ wilcoxon_test <- function(comp_tbl_rank, rank_column, rank_value, test_var) {
   lapply(all_values, function(x) wilcoxon_wrapper(comp_tbl_rank, !!rank_column, rank_value, !!test_var, x)) %>% 
     setNames(all_values) %>% 
     unlist %>% 
-    enframe(as_label(test_var), "pval")
+    enframe(as_label(test_var), "pval") %>% 
+    mutate(pval_kruskal = tryCatch(
+      {kruskal.test(pull(comp_tbl_rank, sample_id_lvl), 
+                    pull(comp_tbl_rank, !!test_var), 
+                    data = comp_tbl_rank)$p.value}, 
+      error = function(e) NA)) %>% 
+    mutate(fdr = p.adjust(pval, method = "BH"),
+           pstar = ifelse(pval < pcut, "*", ""))
 }
 
 ## composition bar plots
@@ -126,9 +133,7 @@ plot_comp_box <- function(comp_tbl_rank, x, y, color, rank_column, rank_value, p
   rank_column <- enquo(rank_column)
   comp_tbl_rank <- filter(comp_tbl_rank, !!rank_column == rank_value) %>% 
     distinct(sample_id_lvl, .keep_all = T)
-  wilcoxon_tbl <- wilcoxon_test(comp_tbl_rank, !!rank_column, rank_value, !!y) %>% 
-    mutate(fdr = p.adjust(pval, method = "BH"),
-           pstar = ifelse(pval < pcut, "*", ""))
+  wilcoxon_tbl <- wilcoxon_test(comp_tbl_rank, !!rank_column, rank_value, !!y)
   
   p <- ggplot(comp_tbl_rank) +
     geom_tile(aes(!!y, !!x, fill = !!color),
@@ -247,13 +252,16 @@ plot_comp_vector <- function(comp_tbl_rank, x, y, shape,
 default_comp_grid_list <- function(
   comp_tbl, rank_column, rank_value, fill_column, 
   n_bar = T, nrel_bar = T, mutsig_box = T, site_box = T, vec_plot = T,
-  site_tiles = F, mutsig_tiles = F,
-  super_type = NULL, super_type_sub = NULL, nmax = 10000, facet = sort_short_x) {
+  site_tiles = F, mutsig_tiles = F, 
+  super_type = NULL, super_type_sub = NULL, nmax = 10000, 
+  facet = sort_short_x, yaxis = T) {
   rank_column <- enquo(rank_column)
   fill_column <- enquo(fill_column)
   facet <- enquo(facet)
   comp_tbl_rank <- rank_by(comp_tbl, !!rank_column, rank_value, !!fill_column, 
                            super_type = super_type, super_type_sub = super_type_sub)
+  comp_tbl_rank_test <- filter(comp_tbl_rank, !!rank_column == rank_value) %>% 
+    distinct(sample_id_lvl, .keep_all = T)
   plist <- list()
   if (n_bar) {
     plist$pbar1 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, n, 
@@ -276,6 +284,8 @@ default_comp_grid_list <- function(
                                  consensus_signature, !!rank_column, rank_value, 
                                  facet = !!facet) + 
       remove_guides
+    wilcoxon_tbl1 <- wilcoxon_test(comp_tbl_rank_test, !!rank_column, rank_value, 
+                                   consensus_signature)
   }
   if (mutsig_tiles) {
     plist$ptiles1 <- plot_comp_box(comp_tbl_rank, sample_id_lvl, label_mutsig, 
@@ -289,6 +299,8 @@ default_comp_grid_list <- function(
                                  tumor_supersite, !!rank_column, rank_value, 
                                  facet = !!facet) + 
       remove_guides
+    wilcoxon_tbl2 <- wilcoxon_test(comp_tbl_rank_test, !!rank_column, rank_value, 
+                                   tumor_supersite)
   }
   if (site_tiles) {
     plist$ptiles2 <- plot_comp_box(comp_tbl_rank, sample_id_lvl, label_supersite, 
@@ -304,6 +316,7 @@ default_comp_grid_list <- function(
       remove_guides
   }
   plist[1:(length(plist)-1)] <- lapply(plist[1:(length(plist)-1)], add, remove_xaxis)
+  if (yaxis == F) plist <- lapply(plist, add, remove_yaxis)
   return(plist)
 }
 

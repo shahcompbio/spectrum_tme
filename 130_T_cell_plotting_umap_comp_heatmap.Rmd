@@ -276,7 +276,7 @@ comp_tbl_sample_sort <- plot_data_sub %>%
   mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite))))
 
 plist <- default_comp_grid_list(
-  comp_tbl_sample_sort, cluster_label_sub, "CD4.T.naive.1",
+  comp_tbl_sample_sort, cluster_label_sub, "CD4.T.naive.centr.mem",
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 comp_grid <- plot_grid(plotlist = plist, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.25, 0.35))

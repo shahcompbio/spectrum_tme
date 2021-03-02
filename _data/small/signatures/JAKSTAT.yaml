@@ -1,0 +1,62 @@
+STAT1:
+  - CASP2
+  - CASP3
+  - CASP7
+  - FAS
+  - FASLG
+  - TNFSF10 # TRAIL
+  - XAF1
+  - IRF1
+  - CDKN1A # p21
+  - CDKN1B # p27
+  - SOCS1
+  - SOCS3
+  - IL12A
+  - IL12B
+  - IFITM1
+  - CXCL10
+STAT2: 
+  - CD40
+  - CD80
+STAT3:
+  - MCL1
+  - BCL2
+  - BCL2L1
+  - BIRC5
+  - CCND1
+  - MYC
+  - PIM1
+  - PIM2
+  - CDKN1A # p21
+  - CDKN1B # p27
+  - VEGFA
+  - FGF2
+  - IL17A
+  - IL23A
+  - CXCL12
+  - MMP2
+  - PTGS2
+  - HIF1A
+  - IL6
+  - IL10
+  - IL21
+  - NOTCH1
+  - RAC1
+  - SOCS1
+  - SOCS3
+STAT4:
+  - IFNG
+STAT5: 
+  - BCL2L1
+  - BCL2
+  - MCL1
+  - BIRC5
+  - PIM1
+  - MYC
+  - CCND1
+  - CDKN1A # p21
+  - ID1
+  - SOCS1
+  - SOCS3
+  - OSM
+  

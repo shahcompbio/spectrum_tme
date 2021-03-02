@@ -406,7 +406,7 @@ for(i in 1:length(Myeloid.super.clusters)){
 
 ```{r chunk_120, fig.width=3.5, fig.height=10, results="asis"}
 
-Fibroblast.super.clusters <- sort(unique(comp_list$Fibroblast.super$cluster_label))[-3]
+Fibroblast.super.clusters <- sort(unique(comp_list$Fibroblast.super$cluster_label))
 
 for(i in 1:length(Fibroblast.super.clusters)){
   
@@ -432,7 +432,7 @@ for(i in 1:length(Fibroblast.super.clusters)){
 
 ```{r chunk_130, fig.width=3.5, fig.height=10, results="asis"}
 
-Cancer.super.clusters <- sort(unique(comp_list$Ovarian.cancer.cell$cluster_label))[5]
+Cancer.super.clusters <- sort(unique(comp_list$Ovarian.cancer.cell$cluster_label))
 
 for(i in 1:length(Cancer.super.clusters)){
   

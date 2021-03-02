@@ -12,7 +12,7 @@ output:
 editor_options: 
   chunk_output_type: console
 params: 
-  cell_type: "Ovarian.cancer.cell"
+  cell_type: "Ovarian.cancer.super"
   cell_type_major: ["Ovarian.cancer.cell"]
   cell_sort: "CD45-"
   louvain_resolution: 0.2
@@ -99,9 +99,25 @@ markers_v6_super[[coi]] %>%
 
 ```{r chunk_032}
 
-marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv")
+## define patient specific clusters
+patient_specific_clusters <- plot_data %>% 
+  group_by(patient_id_short, cluster) %>% 
+  tally %>% 
+  group_by(cluster) %>% 
+  mutate(nrel = n / sum(n),
+         ntotal = sum(n)) %>% 
+  arrange(desc(nrel)) %>% 
+  distinct(cluster, .keep_all = T) %>% 
+  filter(nrel > 0.5) %>% 
+  ungroup %>% 
+  mutate(cluster_label_ps = make.names(paste0("OV.", patient_id_short, ".specific"), unique = T),
+         cluster = as.numeric(cluster)) %>% 
+  distinct(cluster, cluster_label_ps)
+
 
 ## Hypergeometric test --------------------------------------
+
+marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv")
 
 test_set <- marker_tbl %>% 
   group_by(cluster) %>% 
@@ -151,7 +167,7 @@ hyper_tbl <- test_set %>%
   
 low_rank <- str_detect(unique(hyper_tbl$subtype), "doublet|dissociated")
 subtype_lvl <- c(sort(unique(hyper_tbl$subtype)[!low_rank]), sort(unique(hyper_tbl$subtype)[low_rank]))
-  
+
 cluster_label_tbl <- hyper_tbl %>% 
   mutate(subtype = ordered(subtype, levels = subtype_lvl)) %>% 
   arrange(qval, subtype) %>%
@@ -160,7 +176,10 @@ cluster_label_tbl <- hyper_tbl %>%
   mutate(subtype = ifelse(sig, as.character(subtype), paste0("unknown_", cluster))) %>% 
   select(cluster, cluster_label = subtype) %>% 
   ungroup %>% 
-  mutate(cluster_label = make.unique(cluster_label, sep = "_"))
+  mutate(cluster_label = make.unique(cluster_label, sep = "_")) %>% 
+  left_join(patient_specific_clusters, by = "cluster") %>% 
+  mutate(cluster_label = ifelse(is.na(cluster_label_ps), cluster_label, cluster_label_ps)) %>% 
+  select(-cluster_label_ps)
 
 seu_obj$cluster_label <- unname(deframe(cluster_label_tbl)[as.character(unlist(seu_obj[[paste0("RNA_snn_res.", louvain_resolution)]]))])
 plot_data$cluster_label <- seu_obj$cluster_label
@@ -252,9 +271,16 @@ my_subtypes <- names(clrs$cluster_label[[coi]])
 
 my_subtypes <- c(my_subtypes, unlist(lapply(paste0("_", 1:3), function(x) paste0(my_subtypes, x)))) %>% .[!str_detect(., "doublet")]
 
-cells_to_keep <- colnames(seu_obj)[seu_obj$cluster_label %in% my_subtypes]
+if (cell_sort == "CD45+") {
+cells_to_keep <- colnames(seu_obj)[seu_obj$cluster_label %in% my_subtypes & !(str_detect(seu_obj$cell_id, "CD45N"))]
+}
+
+if (cell_sort == "CD45-") {
+cells_to_keep <- colnames(seu_obj)[seu_obj$cluster_label %in% my_subtypes & !(str_detect(seu_obj$cell_id, "CD45P"))]
+}
+
 # seu_obj_sub <- subset(seu_obj, cells = cells_to_keep)
-# seu_obj_sub <- RunUMAP(seu_obj_sub, dims = 1:20, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
+# seu_obj_sub <- RunUMAP(seu_obj_sub, dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
 # seu_obj_sub$cluster_label <- seu_obj$cluster_label[colnames(seu_obj) %in% colnames(seu_obj_sub)]
 # write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
 seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
@@ -264,13 +290,6 @@ plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label")
   mutate(cell_id = colnames(seu_obj_sub),
          cluster_label = ordered(cluster_label, levels = my_subtypes))
   
-if (cell_sort == "CD45+") {
-plot_data_sub <- filter(plot_data_sub, sort_parameters != "singlet, live, CD45-", !is.na(tumor_supersite))
-}
-
-if (cell_sort == "CD45-") {
-plot_data_sub <- filter(plot_data_sub, sort_parameters != "singlet, live, CD45+", !is.na(tumor_supersite))
-}
 
 ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label)) + 
   common_layers_disc +
@@ -301,39 +320,49 @@ write_tsv(select(plot_data_sub, cell_id, everything(), -contains("RNA_")), paste
 
 ```{r chunk_070, fig.width=15, fig.height=5}
 
-signature_modules <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", sheet = 2, skip = 1, range = "M2:P100") %>% 
+signature_modules_cd8 <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", sheet = 2, skip = 1, range = "M2:P100") %>% 
   gather(module, gene) %>% 
   na.omit() %>% 
   group_by(module) %>% 
   do(gene = c(.$gene)) %>% 
-  {setNames(.$gene, .$module)}
+  {setNames(.$gene, .$module)} %>% 
+  setNames(paste0(names(.), ".module"))
 
-signature_modules$ISG.module <- c("CCL5", "CXCL10", "IFNA1", "IFNB1", "ISG15", "IFI27L2", "SAMD9L")
+signature_modules_cin <- yaml::read_yaml("_data/small/signatures/cgas_sting.yaml") %>% 
+  .[lapply(., length) > 1] %>% 
+  setNames(paste0(names(.), ".module"))
 
 # ## compute expression module scores
-# for (i in 1:length(signature_modules)) {
-#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules[i], name = names(signature_modules)[i])
-#   seu_obj_sub[[names(signature_modules)[i]]] <- seu_obj_sub[[paste0(names(signature_modules)[i], "1")]]
-#   seu_obj_sub[[paste0(names(signature_modules)[i], "1")]] <- NULL
-#   print(paste(names(signature_modules)[i], "DONE"))
+# for (i in 1:length(signature_modules_cd8)) {
+#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules_cd8[i], name = names(signature_modules_cd8)[i])
+#   seu_obj_sub[[names(signature_modules_cd8)[i]]] <- seu_obj_sub[[paste0(names(signature_modules_cd8)[i], "1")]]
+#   seu_obj_sub[[paste0(names(signature_modules_cd8)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cd8)[i], "DONE"))
+# }
+# 
+# for (i in 1:length(signature_modules_cin)) {
+#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules_cin[i], name = names(signature_modules_cin)[i])
+#   seu_obj_sub[[names(signature_modules_cin)[i]]] <- seu_obj_sub[[paste0(names(signature_modules_cin)[i], "1")]]
+#   seu_obj_sub[[paste0(names(signature_modules_cin)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cin)[i], "DONE"))
 # }
 # 
 # ## compute progeny scores
-# progeny_list <- seu_obj_sub@assays$RNA@data[VariableFeatures(seu_obj_sub),] %>% 
-#   as.matrix %>% 
-#   progeny %>% 
-#   as.data.frame %>% 
+# progeny_list <- seu_obj_sub@assays$RNA@data[VariableFeatures(seu_obj_sub),] %>%
+#   as.matrix %>%
+#   progeny %>%
+#   as.data.frame %>%
 #   as.list
 # 
 # names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
 # 
 # for (i in 1:length(progeny_list)) {
-#   seu_obj_sub <- AddMetaData(seu_obj_sub, metadata = progeny_list[[i]], 
+#   seu_obj_sub <- AddMetaData(seu_obj_sub, metadata = progeny_list[[i]],
 #                              col.name = names(progeny_list)[i])
 # }
 # 
-# write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
-seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
+# write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered_annotated.rds"))
+seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered_annotated.rds"))
 
 ```
 

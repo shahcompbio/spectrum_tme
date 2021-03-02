@@ -75,10 +75,10 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_processed_filtered.rds`
     - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Myeloid.super_processed_filtered_annotated.rds`
     - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/Myeloid.super_marker_table_annotated.tsv`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Fibroblast.super_processed_filtered_annotated.rds`
+    - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/Fibroblast.super_marker_table_annotated.tsv`
     - [ ] `B.super.annotated.rds`
-    - [ ] `Fibroblast.super.annotated.rds`
     - [ ] `Endothelial.cell.super.annotated.rds`
-    - [ ] `Macrophage.annotated.rds`
 
 
 ## Plotting scripts

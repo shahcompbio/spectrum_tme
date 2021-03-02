@@ -68,11 +68,11 @@ seu_obj_cd8_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_pr
 
 seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds")
 
-seu_obj_ml <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Myeloid.super_processed_filtered_annotated.rds")
+# seu_obj_ml <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Myeloid.super_processed_filtered_annotated.rds")
 
 module_names <- grep("pathway|CD8", colnames(seu_obj_cd8_sub@meta.data), value = T)
 
-gois <- c("ISG15", "CXCL13", "GZMK", "IL7R")
+gois <- c("TCF7", "GZMK", "ISG15", "CXCL13", "TOX", "PDCD1")
 
 module_names_sub <- c("CD8.Naive", "CD8.Cytotoxic", "CD8.Predysfunctional", "CD8.Dysfunctional", "JAK.STAT.pathway")
 
@@ -216,25 +216,38 @@ dc_plot_mutsig <- ggplot() +
 
 ## CD8 T module curves
 
-```{r chunk_130, fig.width=5, fig.height=3}
+```{r chunk_130, fig.width=6, fig.height=4}
 
 # plot_data_smooth <- plot_data %>%
-#   filter(key %in% module_names_sub) %>%
+#   # filter(key %in% "TCF7") %>%
+#   # sample_n(10000) %>% 
 #   group_by(key) %>%
-#   arrange(DC_1) %>%
-#   do(fit = tibble(
-#     smooth = broom::tidy(predict(loess(value ~ DPT1, data = .)))$x,
-#     DPT1 = .$DPT1)) %>%
+#   arrange(DPT1) %>%
+#   mutate(DPT1_bin = as.numeric(cut_number(DPT1, 10000))) %>% 
+#   group_by(key, DPT1_bin) %>%
+#   mutate(mean_value = mean(value)) %>% 
+#   distinct(key, DPT1_bin, .keep_all = T) %>% 
+#   group_by(key) %>%
+#   do(fit = {
+#     loess(mean_value ~ DPT1_bin, data = .) %>%
+#       predict(se = T) %>%
+#       as_tibble() %>%
+#       mutate(DPT1_bin = row_number())
+#     }) %>%
 #   unnest(fit) %>%
 #   group_by(key) %>%
-#   mutate(scaled_smooth = scales::rescale(smooth))
+#   mutate(scaled_value = scales::rescale(fit),
+#          se_upper = scaled_value+scaled_value/fit*se.fit,
+#          se_lower = scaled_value-scaled_value/fit*se.fit)
 # 
 # write_tsv(plot_data_smooth, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_fitted_module_curves.tsv")
-plot_data_smooth <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_fitted_module_curves.tsv") %>% 
-  mutate(key = ordered(key, levels = names(clrs$expression_module)))
+plot_data_smooth <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_fitted_module_curves.tsv")
 
-module_curves <- ggplot(plot_data_smooth) +
-  geom_line(aes(DPT1, scaled_smooth, color = key), size = 1.5)+
+module_curves_module <- plot_data_smooth %>% 
+  filter(key %in% module_names_sub) %>%
+  mutate(key = ordered(key, levels = names(clrs$expression_module))) %>% 
+  ggplot() +
+  geom_line(aes(DPT1_bin, scaled_value, color = key), size = 1.5)+
   labs(x = "Pseudotime", y = "Scaled module score", color = "Module") +
   scale_color_manual(values = clrs$expression_module) +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
@@ -242,7 +255,23 @@ module_curves <- ggplot(plot_data_smooth) +
   guides(color = guide_legend(override.aes = list(fill = NA), ncol = 2)) +
   scale_y_continuous(breaks = c(0, 1))
 
-module_curves
+module_curves_module
+
+module_curves_gois <- plot_data_smooth %>% 
+  filter(key %in% gois) %>%
+  mutate(key = ordered(key, levels = gois)) %>% 
+  ggplot() +
+  geom_line(aes(DPT1_bin, scaled_value, color = key), size = 1.5) +
+  # geom_line(aes(DPT1_bin, se_upper, color = key), size = 0.5, linetype = 2) +
+  # geom_line(aes(DPT1_bin, se_lower, color = key), size = 0.5, linetype = 2) +
+  labs(x = "Pseudotime", y = "Scaled gene expression", color = "Gene") +
+  scale_color_manual(values = magma(7)[-7]) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        legend.position = "bottom") +
+  guides(color = guide_legend(override.aes = list(fill = NA), ncol = 2)) +
+  scale_y_continuous(breaks = c(0, 1))
+
+module_curves_gois
 
 ```
 
@@ -250,17 +279,23 @@ module_curves
 
 ```{r chunk_140, fig.width=6, fig.height=4}
 
-plot_data_sub <- plot_data %>% 
+mutsig_boxplot_data <- plot_data %>% 
   filter(key %in% module_names_sub) %>% 
-  filter(key != "JAK.STAT.pathway") %>% 
-  mutate(key = ordered(key, levels = names(clrs$expression_module)))
-
-
-mutsig_boxplot <- plot_data_sub %>% 
-  mutate(key = str_replace_all(key, "\\.", "\n")) %>% 
+  filter(consensus_signature != "Undetermined") %>% 
+  filter(tumor_supersite != "Ascites") %>% 
+  mutate(key = str_replace_all(key, "CD8\\.", "CD8\n")) %>% 
+  mutate(key = str_replace_all(key, "JAK.STAT.pathway", "JAK/STAT\npathway")) %>% 
   mutate(key = str_replace_all(key, "ysfunctional", "ysfunct.")) %>% 
-  mutate(key = ordered(key, levels = c("CD8\nNaive", "CD8\nPredysfunct.", "CD8\nCytotoxic", "CD8\nDysfunct."))) %>% 
-  ggplot() +
+  mutate(key = ordered(key, levels = c("CD8\nNaive", "CD8\nPredysfunct.", "CD8\nCytotoxic", "CD8\nDysfunct.", "JAK/STAT\npathway")))
+
+mutsig_boxplot_data_stats <- mutsig_boxplot_data %>% 
+  group_by(sample, key) %>% 
+  mutate(value = mean(value)) %>% 
+  distinct(sample, key, .keep_all = T)
+
+mutsig_boxplot <- mutsig_boxplot_data %>% 
+  filter(key != "JAK/STAT\npathway") %>% 
+  ggplot(aes(consensus_signature, value)) +
   geom_violin(aes(consensus_signature, value, fill = consensus_signature), color = "white", adjust = 2, alpha = 0.5, width = 1.5) +
   geom_boxplot(aes(consensus_signature, value, color = consensus_signature),
                width = 0.5, size = 0.75, outlier.shape = NA) +
@@ -268,19 +303,25 @@ mutsig_boxplot <- plot_data_sub %>%
                color = "white", width = 0.5, outlier.shape = NA, size = 0.5) +
   # geom_boxplot(aes(consensus_signature, value, color = consensus_signature),
   #              fill = "white") +
+  stat_compare_means(ref.group = ".all.", 
+                     data = filter(mutsig_boxplot_data_stats, 
+                                   key != "JAK/STAT\npathway"),
+                     label = "p.signif", label.y = 1.6, hide.ns = T) +
+  stat_compare_means(label.y = 1.9, label.x = 1.5, label.sep = "\n\n",
+                     data = filter(mutsig_boxplot_data_stats, 
+                                   key != "JAK/STAT\npathway")) +
   facet_wrap(~key, ncol = 5) +
   scale_color_manual(values = clrs$consensus_signature) +
   scale_fill_manual(values = clrs$consensus_signature) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.title.x = element_blank()) +
-  ylim(c(-1, 2)) +
+  coord_cartesian(ylim = c(-1, 2)) +
   labs(y = "Module score", color = "Mutational\nsignature", 
        fill = "Mutational\nsignature")
 
-
-mutsig_boxplot_jakstat <- filter(plot_data, key == "JAK.STAT.pathway") %>% 
-  mutate(key = str_replace_all(key, "JAK.STAT.pathway", "JAK.STAT\npathway")) %>% 
-  ggplot() +
+mutsig_boxplot_jakstat <- mutsig_boxplot_data %>% 
+  filter(key == "JAK/STAT\npathway") %>% 
+  ggplot(aes(consensus_signature, value)) +
   geom_violin(aes(consensus_signature, value, fill = consensus_signature), color = "white", adjust = 2, alpha = 0.5, width = 1.5) +
   geom_boxplot(aes(consensus_signature, value, color = consensus_signature),
                width = 0.5, size = 0.75, outlier.shape = NA) +
@@ -288,15 +329,21 @@ mutsig_boxplot_jakstat <- filter(plot_data, key == "JAK.STAT.pathway") %>%
                color = "white", width = 0.5, outlier.shape = NA, size = 0.5) +
   # geom_boxplot(aes(consensus_signature, value, color = consensus_signature),
   #              fill = "white") +
-  facet_wrap(~key) +
+  stat_compare_means(ref.group = ".all.", 
+                     data = filter(mutsig_boxplot_data_stats, 
+                                   key == "JAK/STAT\npathway"),
+                     label = "p.signif", label.y = 4.2, hide.ns = T) +
+  stat_compare_means(label.y = 4.8, label.x = 1.5, label.sep = "\n\n",
+                     data = filter(mutsig_boxplot_data_stats, 
+                                   key == "JAK/STAT\npathway")) +
+  facet_wrap(~key, ncol = 5) +
   scale_color_manual(values = clrs$consensus_signature) +
   scale_fill_manual(values = clrs$consensus_signature) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.title.x = element_blank()) +
-  ylim(c(-1, 4)) +
+  coord_cartesian(ylim = c(-1, 5)) +
   labs(y = "PROGENy score", color = "Mutational\nsignature", 
        fill = "Mutational\nsignature")
-
 
 mutsig_boxplot_grid <- plot_grid(
   mutsig_boxplot + guides(color = F, fill = F), 
@@ -346,7 +393,7 @@ ggdraw() +
   draw_plot(cowplot::get_legend(dc_plot_cluster), x = 0.01, y = 0.25) +
   draw_plot(dc_plot_genes, 
             x = 0.12, y = 0, width = 0.22, height = 1) +
-  draw_plot(module_curves, x = 0.36, y = 0, width = 0.25, height = 1) +
+  draw_plot(module_curves_module, x = 0.36, y = 0, width = 0.25, height = 1) +
   draw_plot(mutsig_boxplot_grid, 
             x = 0.65, y = 0, width = 0.35, height = 1)
   # draw_plot(dc_curve_cxcl13_full + guides(color = F), 
@@ -396,19 +443,19 @@ plot_data_cor <- as_tibble(FetchData(seu_obj_cd8_sub, c("sample", "JAK.STAT.path
 cor_plot1 <- plot_data_cor %>% 
   filter(key_tc == "CD8.Dysfunctional", key_cc == "CD274") %>% 
   ggplot() +
-  geom_point(aes(mean_value_tc, mean_value_cc, color = consensus_signature)) +
-  geom_smooth(aes(mean_value_tc, mean_value_cc), method = "lm", se = T,
+  geom_point(aes(mean_value_cc, mean_value_tc, color = consensus_signature)) +
+  geom_smooth(aes(mean_value_cc, mean_value_tc), method = "lm", se = T,
               linetype = 2, size = 0.5, color = "black") +
-  stat_cor(aes(mean_value_tc, mean_value_cc), 
+  stat_cor(aes(mean_value_cc, mean_value_tc), 
            method = "spearman", color = "black") +
   scale_color_manual(values = clrs$consensus_signature) +
-  labs(x = "Dysfunctional score\n(CD8+ T cells)", 
-       y = "CD274 expression\n(cancer cells)",
+  labs(y = "Dysfunctional score\n(CD8+ T cells)", 
+       x = "CD274 expression\n(cancer cells)",
        color = "Mutational\nsignature")
 
 cor_plot2 <- {cor_plot1 + 
-    labs(x = "JAK-STAT score\n(CD8+ T cells)", 
-         y = "JAK-STAT score\n(cancer cells)",
+    labs(y = "JAK-STAT score\n(CD8+ T cells)", 
+         x = "JAK-STAT score\n(cancer cells)",
          color = "Mutational\nsignature")
 } %+%
   filter(plot_data_cor, key_tc == "JAK.STAT.pathway", 
@@ -444,11 +491,11 @@ comp_tbl_cd8 <- distinct(plot_data, cell_id, .keep_all = T) %>%
   mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite))))
 
 plist1 <- default_comp_grid_list(
-  comp_tbl_cd8, cluster_label_sub, "CD8.T.naive.1", nmax = 2000,
+  comp_tbl_cd8, cluster_label_sub, "CD8.T.naive.centr.mem", nmax = 2000,
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 plist2 <- default_comp_grid_list(
-  comp_tbl_cd8, cluster_label_sub, "CD8.T.naive.2", nmax = 2000, 
+  comp_tbl_cd8, cluster_label_sub, "CD8.T.effector.memory", nmax = 2000, 
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 plist3 <- default_comp_grid_list(
@@ -456,11 +503,11 @@ plist3 <- default_comp_grid_list(
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 plist4 <- default_comp_grid_list(
-  comp_tbl_cd8, cluster_label_sub, "CD8.T.CXCL13.early", nmax = 2000, 
+  comp_tbl_cd8, cluster_label_sub, "CD8.T.dysfunc.early", nmax = 2000, 
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 plist5 <- default_comp_grid_list(
-  comp_tbl_cd8, cluster_label_sub, "CD8.T.CXCL13.late", nmax = 2000, 
+  comp_tbl_cd8, cluster_label_sub, "CD8.T.dysfunc.late", nmax = 2000, 
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 plist6 <- default_comp_grid_list(

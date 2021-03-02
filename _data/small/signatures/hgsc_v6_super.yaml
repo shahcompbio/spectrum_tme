@@ -343,7 +343,7 @@ Myeloid.super:
   - EGR1
   - KLF2
   - BTG1
-Endothelial.cell:
+Endothelial.super:
   Arterial.EC:
   - EFNB2 # 18972135
   - NOTCH4 # 18972135
@@ -499,7 +499,7 @@ Fibroblast.super:
   - MTRNR2L12
   - MTRNR2L8
   - SERPINF1
-Ovarian.cancer.cell:
+Ovarian.cancer.super:
   Cancer.cell.1:
   - DAPL1
   - SCGB2A1
@@ -582,47 +582,3 @@ Ovarian.cancer.cell:
   - IL7R
   - CD52
   - PTPRC
-CD8.T:
-  CD8.T.naive:
-  - TCF7
-  - KLRG1
-  - GIMAP7
-  - LYAR
-  - EMP3
-  CD8.T.activated.FOS:
-  - FOS
-  - FOSB
-  - JUNB
-  - DUSP1
-  - GZMK
-  CD8.T.activated.CD40LG:
-  - CD40LG
-  - TNFRSF25
-  - MAF
-  CD8.T.activated.HSP:
-  - HSPA1A
-  - HSPA1B
-  - DNAJB1
-  CD8.T.dysfunctional.CXCL13:
-  - CXCL13
-  - GZMB
-  - CCL3
-  - CTLA4
-  - IFNG
-  CD8.T.dysfunctional.ISG:
-  - IFIT1
-  - IFIT2
-  - IFIT3
-  - ISG15
-  - ISG20
-  gd.T.cell:
-  - TRDC
-  - TRGC1
-  - TRGC2
-  doublet.Plasma.cell:
-  - IGKC
-  - IGLC3
-  - IGHG1
-  - IGLC2
-  - IGHG3
-  

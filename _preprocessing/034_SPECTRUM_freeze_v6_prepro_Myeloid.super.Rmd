@@ -302,38 +302,50 @@ write_tsv(select(plot_data_sub, cell_id, everything(), -umapharmony_1, -umapharm
 
 ```{r chunk_070, fig.width=15, fig.height=5}
 
-signature_modules <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", sheet = 2, skip = 1, range = "M2:P100") %>% 
+signature_modules_cd8 <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", sheet = 2, skip = 1, range = "M2:P100") %>% 
   gather(module, gene) %>% 
   na.omit() %>% 
   group_by(module) %>% 
   do(gene = c(.$gene)) %>% 
-  {setNames(.$gene, .$module)}
+  {setNames(.$gene, .$module)} %>% 
+  setNames(paste0(names(.), ".module"))
 
-signature_modules$ISG.module <- c("CCL5", "CXCL10", "IFNA1", "IFNB1", "ISG15", "IFI27L2", "SAMD9L")
+signature_modules_cin <- yaml::read_yaml("_data/small/signatures/cgas_sting.yaml") %>% 
+  .[lapply(., length) > 1] %>% 
+  setNames(paste0(names(.), ".module"))
 
-## compute expression module scores
-for (i in 1:length(signature_modules)) {
-  seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules[i], name = names(signature_modules)[i])
-  seu_obj_sub[[names(signature_modules)[i]]] <- seu_obj_sub[[paste0(names(signature_modules)[i], "1")]]
-  seu_obj_sub[[paste0(names(signature_modules)[i], "1")]] <- NULL
-  print(paste(names(signature_modules)[i], "DONE"))
-}
-
-## compute progeny scores
-progeny_list <- seu_obj_sub@assays$RNA@data[VariableFeatures(seu_obj_sub),] %>% 
-  as.matrix %>% 
-  progeny %>% 
-  as.data.frame %>% 
-  as.list
-
-names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
-
-for (i in 1:length(progeny_list)) {
-  seu_obj_sub <- AddMetaData(seu_obj_sub, metadata = progeny_list[[i]], 
-                             col.name = names(progeny_list)[i])
-}
-
-write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered_annotated.rds"))
+# ## compute expression module scores
+# for (i in 1:length(signature_modules_cd8)) {
+#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules_cd8[i], name = names(signature_modules_cd8)[i])
+#   seu_obj_sub[[names(signature_modules_cd8)[i]]] <- seu_obj_sub[[paste0(names(signature_modules_cd8)[i], "1")]]
+#   seu_obj_sub[[paste0(names(signature_modules_cd8)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cd8)[i], "DONE"))
+# }
+# 
+# for (i in 1:length(signature_modules_cin)) {
+#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules_cin[i], name = names(signature_modules_cin)[i])
+#   seu_obj_sub[[names(signature_modules_cin)[i]]] <- seu_obj_sub[[paste0(names(signature_modules_cin)[i], "1")]]
+#   seu_obj_sub[[paste0(names(signature_modules_cin)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cin)[i], "DONE"))
+# }
+# 
+# 
+# ## compute progeny scores
+# progeny_list <- seu_obj_sub@assays$RNA@data[VariableFeatures(seu_obj_sub),] %>%
+#   as.matrix %>%
+#   progeny %>%
+#   as.data.frame %>%
+#   as.list
+# 
+# names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
+# 
+# for (i in 1:length(progeny_list)) {
+#   seu_obj_sub <- AddMetaData(seu_obj_sub,
+#                                  metadata = progeny_list[[i]],
+#                                  col.name = names(progeny_list)[i])
+# }
+# 
+# write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered_annotated.rds"))
 seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered_annotated.rds"))
 
 ```
@@ -636,15 +648,23 @@ ggplot(comp_tbl_z) +
 
 ```{r chunk_150, fig.width=12, fig.height=4}
 
-## subset macrophages
+# ## subset macrophages
 # seu_obj_mp <- seu_obj_sub %>%
 #   subset(subset = cluster_label %in% grep("^M1|^M2", unique(seu_obj_sub$cluster_label), value = T)) %>%
 #   RunUMAP(dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
 # 
 # write_rds(seu_obj_mp, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed.rds")
 
-seu_obj_mp <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed.rds")
+# ## subset DCs
+# seu_obj_dc <- seu_obj_sub %>%
+#   subset(subset = cluster_label %in% grep("DC|Mast", unique(seu_obj_sub$cluster_label), value = T)) %>%
+#   RunUMAP(dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
+# 
+# write_rds(seu_obj_dc, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/DCs_processed.rds")
 
+seu_obj_dc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/DCs_processed.rds")
+
+seu_obj_mp <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Macrophages_processed.rds")
 ```
 
 ```{r chunk_170, fig.width=12, fig.height=4}

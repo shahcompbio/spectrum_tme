@@ -1,0 +1,191 @@
+---
+title: "MSK SPECTRUM marker positivity fractions"
+author: "Florian Uhlitz"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    df_print: kable
+    number_sections: yes
+    toc: yes
+    toc_float: true
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+params: 
+  pcut: 0.05
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = F)
+
+```
+
+```{r chunk_010}
+
+library(magrittr)
+library(tidyverse)
+library(Seurat)
+library(readxl)
+library(cowplot)
+library(colorblindr)
+library(viridis)
+library(grid)
+library(ggpubr)
+
+pcut <- params$pcut
+
+```
+
+```{r chunk_020}
+
+## load global vars: 
+source("_src/global_vars.R")
+
+# meta_tbl
+# clrs
+# markers_v6
+# markers_v6_super
+# cell_type_super_lookup
+
+```
+
+```{r chunk_030}
+
+## load data
+seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds")
+
+seu_obj_ml <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Myeloid.super_processed_filtered_annotated.rds")
+
+seu_obj_fb <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Fibroblast.super_processed_filtered_annotated.rds")
+
+gois <- c(grep("^ALDH", rownames(seu_obj_cc), value = T),
+          "PROM1", "CD68", "PECAM1", "NT5E") %>% .[!str_detect(. ,"-AS")]
+
+myfeatures <- c("sample", "umapharmony_1", "umapharmony_2", "cell_type", "cluster_label")
+
+get_data_wrapper <- . %>%
+  FetchData(c(myfeatures, gois)) %>%
+  as_tibble() %>%
+  gather(gene, value, -c(1:length(myfeatures))) %>%
+  left_join(meta_tbl, by = "sample")
+
+plot_data <- bind_rows(
+  `Ovarian.cancer.cell` = get_data_wrapper(seu_obj_cc),
+  `Fibroblast` = get_data_wrapper(seu_obj_fb),
+  `Myeloid.cell` = get_data_wrapper(seu_obj_ml),
+  .id = "cell_type_super"
+)
+
+plot_data_full <- plot_data
+plot_data_sub <- sample_n(plot_data, 100000)
+plot_data <- plot_data_sub
+# write_tsv(plot_data_sub, "cache.tsv")
+# 
+# plot_data <- read_tsv("cache.tsv")
+plot_data <- plot_data_full
+
+```
+
+# Overview
+
+## considered data
+
+We assess marker gene expression in a HGSOC cohort of 42 patients across major cell types:
+  
+  * Fibroblasts: 154k
+  * Myeloid cells: 162k 
+  * Cancer cells: 214k
+
+Marker genes: 
+
+```{r chunk_035, fig.width=12, fig.height=4.5}
+
+cat(gois, sep = ", ")
+
+```
+
+## Marker percentage
+
+```{r chunk_038, fig.width=14, fig.height=5}
+
+plot_data_comp <- plot_data %>% 
+  mutate(expressed = value > 0) %>% 
+  group_by(patient_id_short, cell_type_super, gene) %>% 
+  summarise(pct.expressed = sum(expressed)/length(expressed))
+
+write_tsv(plot_data_comp, "mehta_marker_expression_pct.tsv")
+
+ggplot(plot_data_comp) + 
+  geom_boxplot(aes(gene, pct.expressed)) + 
+  facet_grid(~cell_type_super) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0))
+
+```
+
+# Detailed single cell marker expression data
+
+```{r chunk_040, fig.width=12, fig.height=4.5}
+
+cluster_label_clrs <- c(clrs$cluster_label$Fibroblast.super,
+                        clrs$cluster_label$Myeloid.super,
+                        clrs$cluster_label$Ovarian.cancer.super)
+
+plot_data <- plot_data %>% 
+  mutate(cluster_label = ordered(cluster_label, levels = names(cluster_label_clrs)))
+
+common_layers <- list(
+  remove_xaxis,
+  remove_yaxis
+)
+
+ggplot(distinct(plot_data, umapharmony_1, umapharmony_2, cell_type_super, .keep_all = T)) + 
+  geom_point(aes(umapharmony_1, umapharmony_2, 
+                 color = cluster_label), size = 0.01, alpha = 0.2) +
+  facet_grid(~cell_type_super) +
+  scale_color_manual(values = cluster_label_clrs) + 
+  guides(color = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  common_layers
+
+```
+
+## in the embedding
+
+```{r chunk_050, fig.width=12, fig.height=40}
+
+ggplot() + 
+  geom_point(aes(umapharmony_1, umapharmony_2), 
+             size = 0.01, alpha = 0.2, color = "grey80",
+             data = filter(plot_data, value == 0)) +
+  geom_point(aes(umapharmony_1, umapharmony_2, 
+                 color = value), size = 0.01, alpha = 0.2, 
+             data = filter(plot_data, value > 0)) +
+  facet_grid(gene~cell_type_super) +
+  scale_color_viridis() + 
+  common_layers
+
+```
+
+## box plot distributions wrt cell type subclusters
+
+```{r chunk_060, fig.width=12, fig.height=30}
+
+ggplot(plot_data) + 
+  geom_boxplot(aes(cluster_label, value, fill = cluster_label)) + 
+  facet_grid(gene~cell_type_super, space = "free", scales = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0)) +
+  guides(fill = F) +
+  scale_fill_manual(values = cluster_label_clrs)
+
+```
+
+# session info
+
+```{r chunk_999}
+
+devtools::session_info()
+
+```
+
+
