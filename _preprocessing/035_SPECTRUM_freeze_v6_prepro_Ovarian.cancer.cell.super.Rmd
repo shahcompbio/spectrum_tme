@@ -15,8 +15,8 @@ params:
   cell_type: "Ovarian.cancer.super"
   cell_type_major: ["Ovarian.cancer.cell"]
   cell_sort: "CD45-"
-  louvain_resolution: 0.2
-  louvain_cluster: "RNA_snn_res.0.2"
+  louvain_resolution: 0.3
+  louvain_cluster: "RNA_snn_res.0.3"
 ---
 
 ```{r setup, include=FALSE}
@@ -61,7 +61,7 @@ louvain_cluster <- params$louvain_cluster
 source("_src/global_vars.R")
 
 # seu_obj <- read_rds(paste0("/work/shah/isabl_data_lake/analyses/16/52/1652/celltypes/", coi, "_processed.rds"))
-seu_obj <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc.rds"))
+seu_obj <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.super_highqc.rds"))
 
 myfeatures <- c("umapharmony_1", "umapharmony_2", "sample", louvain_cluster, "doublet", "nCount_RNA", "nFeature_RNA", "percent.mt", "doublet_score")
 
@@ -117,7 +117,8 @@ patient_specific_clusters <- plot_data %>%
 
 ## Hypergeometric test --------------------------------------
 
-marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_highqc_markers_02.tsv")
+# marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.super_highqc_markers_02.tsv")
+marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.super_highqc_markers_03.tsv")
 
 test_set <- marker_tbl %>% 
   group_by(cluster) %>% 
