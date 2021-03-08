@@ -1,0 +1,362 @@
+---
+title: "MSK SPECTRUM TCGA consensus signatures for HGSOC summary"
+author: "Florian Uhlitz"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    df_print: kable
+    number_sections: yes
+    toc: yes
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = F)
+
+```
+
+```{r chunk_010}
+
+library(magrittr)
+library(tidyverse)
+library(Seurat)
+library(readxl)
+library(cowplot)
+library(colorblindr)
+library(viridis)
+library(consensusOV)
+theme_cowplot2 <- function(...) {
+  theme_cowplot(font_size = 12, ...) %+replace%
+    theme(strip.background = element_blank(),
+          #axis.line = element_blank(), 
+          #panel.border = element_rect(linetype = 1, size = 1, color = "black"),
+          plot.background = element_blank())
+}
+theme_set(theme_cowplot2())
+
+```
+
+```{r chunk_020}
+
+subtype_names <- c(IMR_consensus = "Immunoreactive", DIF_consensus = "Differentiated", PRO_consensus = "Proliferative", MES_consensus = "Mesenchymal")
+
+## helper function for data loading 
+round3 <- function(x) round(x, 3)
+
+## load consensus data
+consOV_tbl <- list.files("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/consensusOV/", full.names = T, pattern = "freeze-consensusOV.tsv$") %>% 
+  lapply(read_tsv) %>% 
+  bind_rows() %>% 
+  mutate_if(.predicate = is.numeric, .funs = round3) %>% 
+  mutate(consensusOV = subtype_names[consensusOV])
+
+write_tsv(consOV_tbl, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/consensusOV/SPECTRUM_freeze_v7_consensusOV.tsv")
+
+consOV_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/consensusOV/SPECTRUM_freeze_v7_consensusOV.tsv")
+
+## load meta data
+source("_src/global_vars.R")
+
+## slim cohort data
+cells_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/outs_pre/cells.tsv") %>% 
+  left_join(consOV_tbl, by = "cell_id") %>% 
+  left_join(meta_tbl, by = "sample") %>% 
+  filter(qc_status != "Fail") %>% 
+  rename(UMAP_1 = umap50_1, UMAP_2 = umap50_2) %>% 
+  filter(!is.na(consensusOV))
+
+```
+
+# Overview 
+
+Molecular subtypes for HGSOC based on bulk transcriptome data (e.g. from TCGA or other sources) have been propsoed by different groups ([1](https://www.ncbi.nlm.nih.gov/pubmed/23257362?dopt=Abstract), [2](https://academic.oup.com/jnci/article/106/10/dju249/929299), [3](https://journals.plos.org/plosone/article/file?type=printable&id=10.1371/journal.pone.0018064)). A recent effort [(4)](https://clincancerres.aacrjournals.org/content/24/20/5037.long) refined molecular subtype signatures and provides a computational framework to score subtypes for a given gene expression input matrix with multiple samples. Four main consensus molecular subtypes (CMS) have been described:
+
+* Immunoreactive (__IMR__)
+* Differentiated (__DIF__)
+* Proliferative (__PRO__)
+* Mesenchymal (__MES__)
+
+Differences in clinical outcome have been reported for patients belonging to different groups. Patients of the mesenchymal subtype show the worst overall survival, whereas patients of the immunoreactive subtype show the best overall surival among the four subtypes. Yet, these observed differences in OS are small and molecular subtyping is unlikely to inform treatment decisions in HGSOC. 
+
+A common criticism of molecular subtyping is that subtyping is potentially confounded by cell type identity and might simply reflect cell type composition of the acquired sample. Single cell RNA data now allows to test this hypothesis and investigate the relation between HGSOC molecular subtypes and cell type identity. 
+
+Here, cell-by-cell subtypes were called using a random forrest classifier implemented in the `consensusOV` R library. We find that molecular subtypes are indeed strongly associated with cell type identity: 
+
+* __IMR__ is mainly associated with antigen presenting cells (APCs), i.e. __Macrophages__ and __pDCs__
+* __DIF__ scores high across all cell types, but is most strongly associated with __Ovarian cancer cells__, __B cells__ and __Plasma cells__
+* __PRO__ is mainly associated with __Ovarian cancer cells__ and all __Stromal cell types__
+* __MES__ is strongly associated with most stromal cell types, i.e. __Mesothelial cells__, __Myofibroblasts__ and __Vascular SMCs__
+
+
+# UMAPs {.tabset}
+
+Cell type identity was called with `cellassign` and molecular subtypes were assigned based on highest posterior probability as computed by `consensusOV`. 
+
+```{r chunk_040, fig.width=6.5, fig.height=6}
+
+base_umap <- ggplot(cells_tbl) +
+  coord_fixed() +
+  NoAxes() +
+  theme(legend.position = c(1, 0),
+        legend.justification = c("right", "bottom"),
+        legend.box.just = "right",
+        legend.margin = ggplot2::margin(1, 1, 1, 1),
+        #panel.border = element_rect(linetype = 1, color = "black", size = 1),
+        legend.text = element_text(size = 18),
+        legend.title = element_blank())
+
+pt.size <- 0.01
+pt.alpha <- 0.05
+
+umap_consensusOV <- base_umap + 
+  geom_point(aes(UMAP_1, UMAP_2, color = consensusOV), 
+             size = pt.size, alpha = pt.alpha) +
+  scale_color_manual(values = clrs$consensusOV) +
+  guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
+                              ncol = 1, 
+                              label.position = "left"))
+
+umap_consensusOV_facets <- base_umap + 
+  geom_point(aes(UMAP_1, UMAP_2), color = "grey90", 
+             size = pt.size, alpha = pt.alpha,
+             data = select(cells_tbl, -patient_id_short)) +
+  geom_point(aes(UMAP_1, UMAP_2, color = consensusOV), 
+             size = pt.size, alpha = pt.alpha) +
+  scale_color_manual(values = clrs$consensusOV) +
+  guides(color = F) +
+  facet_wrap(~patient_id_short)
+
+umap_consensusOV
+umap_consensusOV_facets
+
+# ggsave("_fig/01_umap_consensusOV.png", umap_consensusOV, width = 6.5, height = 6)
+# ggsave("_fig/01_umap_consensusOV_per_patient.png", umap_consensusOV_facets, width = 6.5, height = 6)
+
+```
+
+# consensusOV fractions within cell types
+
+```{r chunk_060, fig.width=16, fig.height=12}
+
+consOV_tbl_summary <- cells_tbl %>%
+  select(cell_type, consensusOV, patient_id_short) %>%
+  group_by(cell_type, consensusOV, patient_id_short) %>%
+  tally %>%
+  complete(cell_type, consensusOV, fill = list(n = 0)) %>%
+  group_by(cell_type, patient_id_short) %>%
+  mutate(nrel = n/(sum(n))*100) %>%
+  mutate(consensusOV = ordered(consensusOV, levels = c(names(clrs$consensusOV)))) %>%
+  arrange(consensusOV, nrel) %>%
+  ungroup() #%>%
+  #mutate(cell_type = ordered(str_replace_all(cell_type, "\\.", " "), levels = celltype_order))
+
+ggplot(consOV_tbl_summary) +
+  geom_bar(aes(cell_type, nrel, fill = consensusOV),
+           stat = "identity") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = clrs$consensusOV) +
+  facet_wrap(~patient_id_short, ncol = 6) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(x = "Cell type", y = "Fraction of cells [%]")
+
+```
+
+# consensusOV RF probability distributions
+
+## across patients
+
+```{r chunk_070, fig.width=8, fig.height=12}
+
+consOV_long <- cells_tbl %>% 
+  select(cell_type, patient_id_short, tumor_supersite, contains("_consensus")) %>% 
+  gather(key, value, -cell_type, -patient_id_short, -tumor_supersite) %>% 
+  mutate(key = subtype_names[key])
+
+ggplot(consOV_long) + 
+  geom_boxplot(aes(key, value, color = key)) + 
+  scale_color_manual(values = clrs$consensusOV) +
+  facet_wrap(~patient_id_short, ncol = 6) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  labs(y = "RF posterior probability", x = "")
+
+```
+
+## across cell types
+
+```{r chunk_080, fig.width=12, fig.height=4}
+
+ggplot(consOV_long) + 
+  geom_boxplot(aes(key, value, color = key)) + 
+  scale_color_manual(values = clrs$consensusOV) +
+  facet_wrap(~cell_type, ncol = 10) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  labs(y = "RF posterior probability", x = "")
+
+```
+
+```{r chunk_090, fig.width=9, fig.height=5}
+
+plot_rf <- function(subtype, aty = element_blank()) {
+  consOV_long %>% 
+    filter(key %in% subtype) %>% 
+    filter(cell_type != "Other") %>% 
+    group_by(cell_type) %>% 
+    mutate(median = median(value, na.rm = T)) %>% 
+    arrange(median) %>% 
+    ungroup %>% 
+    mutate(cell_type = ordered(cell_type, levels = rev(unique(cell_type)))) %>% 
+    ggplot() + 
+    geom_boxplot(aes(cell_type, value, color = key)) + 
+    scale_color_manual(values = clrs$consensusOV, guide = F) +
+    scale_y_continuous(breaks = c(0, 0.5, 1), limits = c(0, 1), expand = c(0, 0)) + 
+    theme(axis.title.y = aty,
+          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          plot.title = element_text(size = 11)) + 
+    labs(y = "RF posterior probability", x = "", title = subtype)
+}
+
+ggdraw() +
+  draw_plot(plot_rf("Immunoreactive", aty = element_text(angle = 90, hjust = 0.5, vjust = 0.5)), width = 0.28, height = 1, x = 0, y = 0) +
+  draw_plot(plot_rf("Differentiated"), width = 0.24, height = 1, x = 0.28, y = 0) +
+  draw_plot(plot_rf("Proliferative"), width = 0.24, height = 1, x = 0.52, y = 0) +
+  draw_plot(plot_rf("Mesenchymal"), width = 0.24, height = 1, x = 0.76, y = 0)
+
+# ggsave("_fig/044_consensus_molecular_subtypes_per_cell_type.pdf", width = 6, height = 3)
+
+```
+
+# heatmap representations 
+
+## per patient
+
+```{r chunk_100, fig.width=12, fig.height=4}
+
+cell_type_order <- consOV_long %>% 
+  filter(cell_type != "Other") %>% 
+  filter(key %in% "Immunoreactive") %>% 
+  group_by(cell_type) %>% 
+  mutate(median = median(value, na.rm = T)) %>% 
+  arrange(median) %>% 
+  ungroup %>% 
+  pull(cell_type) %>% 
+  unique
+
+consOV_median <- consOV_long %>% 
+  filter(cell_type != "Other") %>% 
+  mutate(cell_type = ordered(cell_type, levels = cell_type_order)) %>% 
+  group_by(cell_type, patient_id_short, key) %>% 
+  summarise(value = median(value, na.rm = T)) %>% 
+  ungroup %>% 
+  mutate(value_scaled = scales::rescale(value))
+
+consOV_median %>% 
+  arrange(patient_id_short, cell_type, -value) %>% 
+  group_by(patient_id_short, cell_type) %>% 
+  slice(1) %>% 
+  ggplot() +
+  geom_tile(aes(patient_id_short, cell_type, fill = key)) +
+  scale_fill_manual(values = clrs$consensusOV) +
+  coord_fixed() +
+  theme(axis.line = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.title = element_blank())
+
+plot_subtype_heat <- function(subtype) {
+  consOV_median %>% 
+    arrange(patient_id_short, cell_type, -value_scaled) %>% 
+    group_by(patient_id_short, cell_type) %>% 
+    filter(key == subtype) %>% 
+    ggplot() +
+    geom_tile(aes(patient_id_short, cell_type, alpha = value_scaled), 
+              fill = clrs$consensusOV[subtype]) +
+    scale_alpha_continuous(limits = c(0,1), breaks = c(0,1)) +
+    coord_fixed() +
+    theme(axis.line = element_blank(), 
+          axis.ticks = element_blank(),
+          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          axis.title = element_blank()) +
+    guides(alpha = F)
+}
+
+plot_subtype_heat("Immunoreactive")
+plot_subtype_heat("Differentiated")
+plot_subtype_heat("Proliferative")
+plot_subtype_heat("Mesenchymal")
+
+g1 <- ggdraw() +
+  draw_plot(plot_subtype_heat("Immunoreactive"), width = 1, height = 1, x = 0, y = 0) +
+  draw_plot(plot_subtype_heat("Differentiated"), width = 1, height = 1, x = 0, y = 0) +
+  draw_plot(plot_subtype_heat("Proliferative"), width = 1, height = 1, x = 0, y = 0) +
+  draw_plot(plot_subtype_heat("Mesenchymal"), width = 1, height = 1, x = 0, y = 0)
+
+g1
+# ggsave("_fig/02_cms_heat.pdf", g1, width = 6, height = 2)
+
+```
+
+## per site
+
+```{r chunk_110, fig.width=10, fig.height=4}
+
+consOV_median_site <- consOV_long %>% 
+  filter(cell_type != "Other") %>% 
+  mutate(cell_type = ordered(cell_type, levels = cell_type_order)) %>% 
+  group_by(cell_type, tumor_supersite, key) %>% 
+  summarise(value = median(value, na.rm = T)) %>% 
+  ungroup %>% 
+  mutate(value_scaled = scales::rescale(value))
+
+consOV_median_site %>% 
+  arrange(tumor_supersite, cell_type, -value) %>% 
+  group_by(tumor_supersite, cell_type) %>% 
+  slice(1) %>% 
+  ggplot() +
+  geom_tile(aes(tumor_supersite, cell_type, fill = key)) +
+  scale_fill_manual(values = clrs$consensusOV) +
+  coord_fixed() +
+  theme(axis.line = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.title = element_blank())
+
+plot_subtype_heat_site <- function(subtype) {
+  consOV_median_site %>% 
+    arrange(tumor_supersite, cell_type, -value_scaled) %>% 
+    group_by(tumor_supersite, cell_type) %>% 
+    filter(key == subtype) %>% 
+    ggplot() +
+    geom_tile(aes(tumor_supersite, cell_type, alpha = value_scaled), 
+              fill = clrs$consensusOV[subtype]) +
+    scale_alpha_continuous(limits = c(0,1), breaks = c(0,1)) +
+    coord_fixed() +
+    theme(axis.line = element_blank(), 
+          axis.ticks = element_blank(),
+          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          axis.title = element_blank()) +
+    guides(alpha = F)
+}
+
+plot_subtype_heat_site("Immunoreactive")
+plot_subtype_heat_site("Differentiated")
+plot_subtype_heat_site("Proliferative")
+plot_subtype_heat_site("Mesenchymal")
+
+g2 <- ggdraw() +
+  draw_plot(plot_subtype_heat_site("Immunoreactive"), width = 1, height = 1, x = 0, y = 0) +
+  draw_plot(plot_subtype_heat_site("Differentiated"), width = 1, height = 1, x = 0, y = 0) +
+  draw_plot(plot_subtype_heat_site("Proliferative"), width = 1, height = 1, x = 0, y = 0) +
+  draw_plot(plot_subtype_heat_site("Mesenchymal"), width = 1, height = 1, x = 0, y = 0)
+
+g2
+# ggsave("_fig/02_cms_heat_site.pdf", g2, width = 6, height = 2.5)
+
+```
+
+
+

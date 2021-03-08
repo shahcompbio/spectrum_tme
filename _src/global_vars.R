@@ -46,26 +46,26 @@ add_umap_coord <- function(gg_obj) {
 
 ## cohort marker genes ----------------------------
 
-markers_v6 <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_major.yaml")
+markers_v7 <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v7_major.yaml")
 
 helper_markers <- function(x) select(unnest(enframe(x, "subtype", "gene"), cols = gene), gene, subtype)
-markers_v6_super <- lapply(yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_super.yaml"), helper_markers)
+markers_v7_super <- lapply(yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v7_super.yaml"), helper_markers)
 
 ## load color code --------------------------------
 
-clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_colors.yaml") %>% 
+clrs <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v7_colors.yaml") %>% 
   lapply(function(x) map_depth(x, vec_depth(x)-2, unlist))
 
 clrs$patient_id_short <- clrs$patient_id
 names(clrs$patient_id_short) <- str_remove_all(names(clrs$patient_id), "SPECTRUM-OV-")
 
-shps <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v6_shapes.yaml") %>% 
+shps <- yaml::read_yaml("/home/uhlitzf/spectrum_tme/_data/small/signatures/hgsc_v7_shapes.yaml") %>% 
   lapply(function(x) map_depth(x, vec_depth(x)-2, unlist))
 
 ## load meta data ----------------------------------
 
-meta_tbl <- read_excel("/home/uhlitzf/spectrum_tme/_data/small/MSK SPECTRUM - Single cell RNA-seq_v6.xlsx", sheet = 2) %>% 
-  filter(!(patient_id %in% c("SPECTRUM-OV-100", "SPECTRUM-OV-099", "SPECTRUM-OV-118")),
+meta_tbl <- read_excel("/home/uhlitzf/spectrum_tme/_data/small/MSK SPECTRUM - Single cell RNA-seq_v7.xlsx", sheet = 2) %>% 
+  filter(!(patient_id %in% c("SPECTRUM-OV-100", "SPECTRUM-OV-099")),
          therapy == "pre-Rx") %>% 
   rename(sample = isabl_id) %>% 
   distinct(sample, .keep_all = T) %>% 

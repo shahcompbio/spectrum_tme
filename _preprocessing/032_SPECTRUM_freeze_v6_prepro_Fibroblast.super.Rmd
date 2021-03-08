@@ -302,40 +302,6 @@ write_tsv(select(plot_data_sub, cell_id, everything(), -umapharmony_1, -umapharm
 
 ```
 
-```{r chunk_066, fig.width=7, fig.height=4}
-
-# seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_processed_filtered.rds"))
-# seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds")
-# 
-# 
-# plot_data_fb <- as_tibble(FetchData(seu_obj_sub, c("sample", "cluster_label", "cell_type", "IL6", "CXCL12"))) %>% 
-#   filter(str_detect(sample, "CD45N")) %>% 
-#   gather(key, value, -c(1:3)) %>% 
-#   mutate(n = value > 0) %>% 
-#   group_by(sample, key) %>% 
-#   mutate(ntotal = sum(n),
-#          nlength = length(n)) %>% 
-#   mutate(nrel = ntotal/nlength,
-#          value = mean(value)) %>% 
-#   distinct(sample, key, nrel, value)
-# 
-# plot_data_cc <- as_tibble(FetchData(seu_obj_cc, c("sample", "cluster_label", "cell_type", "JAK.STAT.pathway"))) %>% 
-#   filter(str_detect(sample, "CD45N")) %>% 
-#   group_by(sample) %>% 
-#   summarise(JAK.STAT.pathway = mean(JAK.STAT.pathway))
-# 
-# plot_data <- plot_data_fb %>% 
-#   left_join(plot_data_cc, by = "sample")
-# 
-# library(ggpubr)
-# ggplot(plot_data, aes(value, JAK.STAT.pathway)) +
-#   geom_point() + 
-#   ggpubr::stat_cor() +
-#   facet_grid(~key)
-
-```
-
-
 ## add module scores and pathway scores
 
 ```{r chunk_070, fig.width=15, fig.height=5}

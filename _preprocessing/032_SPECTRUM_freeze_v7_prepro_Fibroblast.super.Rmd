@@ -1,0 +1,647 @@
+---
+title: "MSK SPECTRUM freeze major subset deep dives"
+author: "Florian Uhlitz"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    df_print: kable
+    number_sections: yes
+    toc: yes
+    toc_float: true
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+params: 
+  cell_type_super: "Fibroblast.super"
+  cell_type_major: ["Fibroblast"]
+  cell_sort: "CD45-"
+  louvain_resolution: 0.3
+  louvain_cluster: "RNA_snn_res.0.3"
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = F)
+
+```
+
+```{r chunk_010}
+
+library(magrittr)
+library(tidyverse)
+library(Seurat)
+library(readxl)
+library(cowplot)
+library(colorblindr)
+library(viridis)
+library(progeny)
+library(destiny)
+
+coi <- params$cell_type_super
+cell_sort <- params$cell_sort
+cell_type_major <- params$cell_type_major
+louvain_resolution <- params$louvain_resolution
+louvain_cluster <- params$louvain_cluster
+
+```
+
+# Cluster markers 
+
+## Major `r coi` markers for cell assign
+
+```{r chunk_020}
+
+### load all data ---------------------------------
+source("_src/global_vars.R")
+
+# seu_obj <- read_rds(paste0("/work/shah/isabl_data_lake/analyses/16/52/1652/celltypes/", coi, "_processed.rds"))
+seu_obj <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/outs_pre/", coi, "_seurat_", louvain_resolution, ".rds"))
+# seu_obj <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_highqc.rds"))
+
+myfeatures <- c("umapharmony_1", "umapharmony_2", "sample", louvain_cluster, "doublet", "nCount_RNA", "nFeature_RNA", "percent.mt", "doublet_score")
+
+plot_data_wrapper <- function(cluster_res) {
+  cluster_res <- enquo(cluster_res)
+  as_tibble(FetchData(seu_obj, myfeatures)) %>% 
+    left_join(meta_tbl, by = "sample") %>% 
+    rename(cluster = !!cluster_res) %>% 
+    mutate(cluster = as.character(cluster),
+           tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite)))
+}
+
+plot_data <- plot_data_wrapper(louvain_cluster)
+
+```
+
+`r markers_v7[[coi]]`
+
+## Subtype currated markers
+
+```{r chunk_030}
+
+helper_f <- function(x) ifelse(is.na(x), "", x)
+
+markers_v7_super[[coi]] %>% 
+  group_by(subtype) %>% 
+  mutate(rank = row_number(gene)) %>% 
+  spread(subtype, gene) %>% 
+  mutate_all(.funs = helper_f) %>% 
+  formattable::formattable()
+
+```
+
+## Subtype cluster markers
+
+```{r chunk_032}
+
+# marker_tbl <- read_tsv(paste0("/work/shah/isabl_data_lake/analyses/16/52/1652/celltypes/", coi, "_markers.tsv")) %>% 
+#   filter(resolution == louvain_resolution)
+marker_tbl <- read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/outs_pre/", coi, "_markers_", louvain_resolution, ".tsv"))
+# marker_tbl <- read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_highqc_markers_02.tsv"))
+
+## Hypergeometric test --------------------------------------
+
+test_set <- marker_tbl %>% 
+  group_by(cluster) %>% 
+  filter(!str_detect(gene, "^RPS|^RPL")) %>% 
+  slice(1:50) %>% 
+  mutate(k = length(cluster)) %>% 
+  ungroup %>%
+  select(cluster, gene, k) %>% 
+  mutate(join_helper = 1) %>% 
+  group_by(cluster, join_helper, k) %>%
+  nest(test_set = gene)
+
+markers_doub_tbl <- markers_v7 %>% 
+  enframe("subtype", "gene") %>% 
+  filter(!(subtype %in% unique(c(coi, cell_type_major)))) %>% 
+  unnest(gene) %>% 
+  group_by(gene) %>% 
+  filter(length(gene) == 1) %>% 
+  mutate(subtype = paste0("doublet.", subtype)) %>% 
+  bind_rows(tibble(subtype = "Mito.high", gene = grep("^MT-", rownames(seu_obj), value = T)))
+
+ref_set <- markers_v7_super[[coi]] %>% 
+  bind_rows(markers_doub_tbl) %>% 
+  group_by(subtype) %>% 
+  mutate(m = length(gene),
+         n = length(rownames(seu_obj))-m,
+         join_helper = 1) %>% 
+  group_by(subtype, m, n, join_helper) %>%
+  nest(ref_set = gene)
+
+hyper_tbl <- test_set %>% 
+  left_join(ref_set, by = "join_helper") %>% 
+  group_by(cluster, subtype, m, n, k) %>%
+  do(q = length(intersect(unlist(.$ref_set), unlist(.$test_set)))) %>%
+  mutate(pval = 1-phyper(q = q, m = m, n = n, k = k)) %>%
+  ungroup %>%
+  mutate(qval = p.adjust(pval, "BH"),
+         sig = qval < 0.01)
+
+# hyper_tbl %>% 
+#   group_by(subtype) %>% 
+#   filter(any(qval < 0.01)) %>%
+#   ggplot(aes(subtype, -log10(qval), fill = sig)) +
+#   geom_bar(stat = "identity") +
+#   facet_wrap(~cluster) +
+#   coord_flip()
+  
+low_rank <- str_detect(unique(hyper_tbl$subtype), "doublet|dissociated|Mito.high|OV\\.[0-9]")
+subtype_lvl <- c(sort(unique(hyper_tbl$subtype)[!low_rank]), sort(unique(hyper_tbl$subtype)[low_rank]))
+  
+cluster_label_tbl <- hyper_tbl %>% 
+  mutate(subtype = ordered(subtype, levels = subtype_lvl)) %>% 
+  arrange(qval, subtype) %>%
+  group_by(cluster) %>% 
+  slice(1) %>% 
+  mutate(subtype = ifelse(sig, as.character(subtype), paste0("unknown_", cluster))) %>% 
+  select(cluster, cluster_label = subtype) %>% 
+  ungroup %>% 
+  mutate(cluster_label = make.unique(cluster_label, sep = "_"))
+
+seu_obj$cluster_label <- unname(deframe(cluster_label_tbl)[as.character(unlist(seu_obj[[paste0("RNA_snn_res.", louvain_resolution)]]))])
+plot_data$cluster_label <- seu_obj$cluster_label
+
+cluster_n_tbl <- seu_obj$cluster_label %>% 
+  table() %>% 
+  enframe("cluster_label", "cluster_n") %>% 
+  mutate(cluster_nrel = cluster_n/sum(cluster_n))
+
+marker_sheet <- marker_tbl %>% 
+  left_join(cluster_label_tbl, by = "cluster") %>% 
+  group_by(cluster_label) %>% 
+  filter(!str_detect(gene, "^RPS|^RPL")) %>% 
+  slice(1:50) %>% 
+  mutate(rank = row_number(-avg_logFC)) %>% 
+  select(cluster_label, gene, rank) %>% 
+  ungroup %>% 
+  mutate(cluster_label = ordered(cluster_label, levels = unique(c(names(clrs$cluster_label[[coi]]), sort(cluster_label))))) %>% 
+  spread(cluster_label, gene) %>% 
+  mutate_all(.funs = helper_f)
+
+marker_tbl_annotated <- marker_tbl %>% 
+  left_join(cluster_label_tbl, by = "cluster") %>% 
+  left_join(cluster_n_tbl, by = "cluster_label") %>% 
+  select(-cluster, -resolution) %>% 
+  mutate(cluster_label = ordered(cluster_label, levels = unique(c(names(clrs$cluster_label[[coi]]), sort(cluster_label))))) %>% 
+  arrange(cluster_label, -avg_logFC, p_val_adj)
+
+write_tsv(marker_sheet, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_marker_sheet.tsv"))
+
+write_tsv(marker_sheet, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/", coi, "_marker_sheet.tsv"))
+
+write_tsv(marker_tbl_annotated, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_marker_table_annotated.tsv"))
+
+write_tsv(marker_tbl_annotated, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/", coi, "_marker_table_annotated.tsv"))
+
+formattable::formattable(marker_sheet)
+
+```
+
+# Clusters
+
+## sizes
+
+```{r chunk_40, fig.width=5, fig.height=3}
+
+enframe(sort(table(seu_obj$cluster_label))) %>% 
+  mutate(name = ordered(name, levels = rev(name))) %>% 
+  ggplot() +
+  geom_bar(aes(name, value), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(y = c("#cells"), x = "cluster")
+
+```
+
+## UMAP
+
+```{r chunk_50, fig.width=7, fig.height=4}
+
+alpha_lvl <- ifelse(nrow(plot_data) < 20000, 0.2, 0.1)
+pt_size <- ifelse(nrow(plot_data) < 20000, 0.2, 0.05)
+
+common_layers_disc <- list(  
+  geom_point(size = pt_size, alpha = alpha_lvl),
+  NoAxes(),
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1))),
+  labs(color = "")
+)
+
+common_layers_cont <- list(  
+  geom_point(size = pt_size, alpha = alpha_lvl),
+  NoAxes(),
+  scale_color_gradientn(colors = viridis(9)),
+  guides(color = guide_colorbar())
+)
+
+ggplot(plot_data, aes(umapharmony_1, umapharmony_2, color = cluster_label)) + 
+  common_layers_disc +
+  #facet_wrap(~therapy) +
+  ggtitle("Sub cluster")
+
+```
+
+# Filtering out doublet clusters
+
+## UMAP
+
+```{r chunk_60, fig.width=7, fig.height=4}
+
+my_subtypes <- names(clrs$cluster_label[[coi]])
+my_subtypes <- c(my_subtypes, unlist(lapply(paste0("_", 1:3), function(x) paste0(my_subtypes, x)))) %>% .[!str_detect(., "doublet|dissociated|Mito.high|OV\\.[0-9]")]
+my_subtypes <- my_subtypes[my_subtypes %in% unique(seu_obj$cluster_label)]
+my_subtypes <- my_subtypes[my_subtypes %in% names(clrs$cluster_label[[coi]])]
+
+cells_to_keep <- colnames(seu_obj)[seu_obj$cluster_label %in% my_subtypes]
+seu_obj_sub <- subset(seu_obj, cells = cells_to_keep)
+seu_obj_sub <- RunUMAP(seu_obj_sub, dims = 1:50, reduction = "harmony", reduction.name = "umapharmony", reduction.key = "umapharmony_")
+seu_obj_sub$cluster_label <- seu_obj$cluster_label[colnames(seu_obj) %in% colnames(seu_obj_sub)]
+write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered.rds"))
+seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered.rds"))
+
+plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label"))) %>% 
+  left_join(meta_tbl, by = "sample") %>% 
+  mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-"),
+         tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
+  mutate(cell_id = colnames(seu_obj_sub),
+         cluster_label = ordered(cluster_label, levels = my_subtypes),
+         )
+  
+if (cell_sort == "CD45+") {
+plot_data_sub <- filter(plot_data_sub, sort_parameters != "singlet, live, CD45-", !is.na(tumor_supersite))
+}
+
+if (cell_sort == "CD45-") {
+plot_data_sub <- filter(plot_data_sub, sort_parameters != "singlet, live, CD45+", !is.na(tumor_supersite))
+}
+
+ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label)) + 
+  common_layers_disc +
+  ggtitle("Sub cluster") +
+  #facet_wrap(~cluster_label) +
+  scale_color_manual(values = clrs$cluster_label[[coi]])
+
+ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = patient_id_short)) + 
+  common_layers_disc +
+  ggtitle("Patient") +
+  # facet_wrap(~therapy) +
+  scale_color_manual(values = clrs$patient_id_short)
+
+ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = tumor_supersite)) + 
+  # geom_point(aes(umapharmony_1, umapharmony_2), 
+  #            color = "grey90", size = 0.01, 
+  #            data = select(plot_data_sub, -tumor_supersite)) +
+  common_layers_disc +
+  ggtitle("Site") +
+  # facet_wrap(~therapy) +
+  scale_color_manual(values = clrs$tumor_supersite)
+
+write_tsv(select(plot_data_sub, cell_id, everything(), -umapharmony_1, -umapharmony_2, -contains("RNA_")), paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_embedding.tsv"))
+
+```
+
+## add module scores and pathway scores
+
+```{r chunk_070, fig.width=15, fig.height=5}
+
+signature_modules <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", sheet = 2, skip = 1, range = "M2:P100") %>%
+  gather(module, gene) %>%
+  na.omit() %>%
+  group_by(module) %>%
+  do(gene = c(.$gene)) %>%
+  {setNames(.$gene, .$module)}
+
+signature_modules$ISG.module <- c("CCL5", "CXCL10", "IFNA1", "IFNB1", "ISG15", "IFI27L2", "SAMD9L")
+
+## compute expression module scores
+for (i in 1:length(signature_modules)) {
+  seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules[i], name = names(signature_modules)[i])
+  seu_obj_sub[[names(signature_modules)[i]]] <- seu_obj_sub[[paste0(names(signature_modules)[i], "1")]]
+  seu_obj_sub[[paste0(names(signature_modules)[i], "1")]] <- NULL
+  print(paste(names(signature_modules)[i], "DONE"))
+}
+
+## compute progeny scores
+progeny_list <- seu_obj_sub@assays$RNA@data[VariableFeatures(seu_obj_sub),] %>%
+  as.matrix %>%
+  progeny %>%
+  as.data.frame %>%
+  as.list
+
+names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
+
+for (i in 1:length(progeny_list)) {
+  seu_obj_sub <- AddMetaData(seu_obj_sub, metadata = progeny_list[[i]],
+                             col.name = names(progeny_list)[i])
+}
+
+write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
+seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
+
+```
+
+## marker heatmap 
+
+```{r chunk_45, fig.width=18, fig.height=6}
+
+marker_top_tbl <- marker_sheet[,-1] %>% 
+  slice(1:10) %>% 
+  as.list %>% 
+  .[!str_detect(names(.), "doublet|dissociated|Mito.high|OV\\.[0-9]")] %>% 
+  enframe("cluster_label_x", "gene") %>% 
+  unnest(gene)
+
+plot_data_markers <- as_tibble(FetchData(seu_obj_sub, c("cluster_label", myfeatures, unique(marker_top_tbl$gene)))) %>% 
+  gather(gene, value, -c(1:(length(myfeatures)+1))) %>% 
+  left_join(meta_tbl, by = "sample") %>% 
+  mutate(patient_id = str_remove_all(patient_id, "SPECTRUM-OV-"),
+         tumor_supersite = ordered(tumor_supersite, levels = names(clrs$tumor_supersite))) %>% 
+  mutate(cluster_label = ordered(cluster_label, levels = my_subtypes)) %>% 
+  group_by(cluster_label, gene) %>% 
+  summarise(value = mean(value, na.rm = T)) %>% 
+  group_by(gene) %>% 
+  mutate(value = scales::rescale(value)) %>% 
+  left_join(marker_top_tbl, by = "gene") %>% 
+  mutate(cluster_label_x = ordered(cluster_label_x, levels = rev(names(clrs$cluster_label[[coi]]))))
+
+ggplot(plot_data_markers) +
+  geom_tile(aes(gene, cluster_label, fill = value)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  facet_grid(~cluster_label_x, scales = "free", space = "free") +
+  scale_fill_gradientn(colors = viridis(9)) +
+  labs(fill = "Scaled\nexpression") +
+  theme(aspect.ratio = 1,
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_blank())
+
+# ggsave(paste0("_fig/002_marker_heatmap_", coi, ".pdf"), width = nrow(marker_top_tbl)/6, height = 5)
+ 
+```
+
+## composition
+
+### per site
+
+```{r chunk_110, fig.width=10, fig.height=4}
+
+comp_site_tbl <- plot_data_sub %>%
+  filter(!is.na(tumor_supersite)) %>% 
+  group_by(cluster_label, tumor_supersite) %>%
+  tally %>%
+  group_by(tumor_supersite) %>%
+  mutate(nrel = n/sum(n)*100) %>%
+  ungroup
+
+pnrel_site <- ggplot(comp_site_tbl) +
+  geom_bar(aes(tumor_supersite, nrel, fill = cluster_label),
+           stat = "identity", position = position_stack()) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(fill = "Cluster", y = "Fraction [%]", x = "") +
+  scale_fill_manual(values = clrs$cluster_label[[coi]])
+
+pnabs_site <- ggplot(comp_site_tbl) +
+  geom_bar(aes(tumor_supersite, n, fill = cluster_label),
+           stat = "identity", position = position_stack()) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(fill = "Cluster", y = "# cells", x = "") +
+  scale_fill_manual(values = clrs$cluster_label[[coi]])
+
+plot_grid(pnabs_site, pnrel_site, ncol = 2, align = "h")
+
+# ggsave(paste0("_fig/02_deep_dive_", coi, "_comp_site.pdf"), width = 8, height = 4)
+
+```
+
+### per sample
+
+```{r chunk_120, fig.width=16, fig.height=6}
+
+comp_tbl_sample_sort <- plot_data_sub %>% 
+  group_by(tumor_subsite, tumor_supersite, patient_id, consensus_signature, therapy, cluster_label) %>% 
+  tally %>% 
+  group_by(tumor_subsite, tumor_supersite, patient_id, consensus_signature, therapy) %>% 
+  mutate(nrel = n/sum(n)*100,
+         nsum = sum(n),
+         log10n = log10(n),
+         label_supersite = "Site",
+         label_mutsig = "Signature",
+         label_therapy = "Rx") %>% 
+  ungroup %>% 
+  arrange(desc(therapy), tumor_supersite) %>% 
+  mutate(tumor_subsite_rx = paste0(tumor_subsite, "_", therapy)) %>% 
+  mutate(tumor_subsite = ordered(tumor_subsite, levels = unique(tumor_subsite)),
+         tumor_subsite_rx = ordered(tumor_subsite_rx, levels = unique(tumor_subsite_rx))) %>% 
+  arrange(patient_id) %>% 
+  mutate(label_patient_id = ifelse(as.logical(as.numeric(fct_inorder(as.character(patient_id)))%%2), "Patient1", "Patient2"))
+
+sample_id_x_tbl <- plot_data_sub %>% 
+  mutate(sort_short_x = cell_sort) %>% 
+  distinct(patient_id, sort_short_x, tumor_subsite, therapy, sample) %>% 
+  unite(sample_id_x, patient_id, sort_short_x, tumor_subsite, therapy) %>% 
+  arrange(sample_id_x)
+
+comp_tbl_sample_sort %>% 
+  mutate(sort_short_x = cell_sort) %>% 
+  unite(sample_id_x, patient_id, sort_short_x, tumor_subsite_rx) %>% 
+  select(sample_id_x, cluster_label, n, nrel, nsum) %>% 
+  left_join(sample_id_x_tbl, by = "sample_id_x") %>% 
+  write_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_subtype_compositions.tsv"))
+
+```
+
+
+```{r chunk_130, fig.width=16, fig.height=3}
+
+ybreaks <- c(500, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 20000)
+
+max_cells_per_sample <- max(comp_tbl_sample_sort$nsum)
+ymaxn <- ybreaks[max_cells_per_sample < ybreaks][1]
+
+comp_plot_wrapper <- function(y = "nrel", switch = NULL) {
+  if (y == "nrel") ylab <- paste0("Fraction\nof cells [%]")
+  if (y == "n") ylab <- paste0("Number\nof cells")
+  p <- ggplot(comp_tbl_sample_sort, 
+              aes_string("tumor_subsite_rx", y, fill = "cluster_label")) + 
+    facet_grid(~patient_id, space = "free", scales = "free", switch = switch) +
+    coord_cartesian(clip = "off") + 
+    scale_fill_manual(values = clrs$cluster_label[[coi]]) + 
+    theme(axis.text.x = element_blank(),
+          axis.title.y = element_text(angle = 0, vjust = 0.5, hjust = 0.5, 
+                                      margin = margin(0, -0.4, 0, 0, unit = "npc")),
+          axis.ticks.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.line.x = element_blank(),
+          strip.text.y = element_blank(),
+          strip.text.x = element_blank(),
+          strip.background.y = element_blank(),
+          strip.background.x = element_blank(),
+          plot.margin = margin(0, 0, 0, 0, "npc")) + 
+    labs(x = "",
+         y = ylab) +
+    guides(fill = FALSE)
+  if (y == "nrel") p <- p + 
+    geom_bar(stat = "identity") +
+    scale_y_continuous(expand = c(0, 0), 
+                       breaks = c(0, 50, 100), 
+                       labels = c("0", "50", "100"))
+  if (y == "n") p <- p + 
+    geom_bar(stat = "identity", position = position_stack()) +
+    scale_y_continuous(expand = c(0, 0), 
+                       breaks = c(0, ymaxn/2, ymaxn),
+                       limits = c(0, ymaxn),
+                       labels = c("", ymaxn/2, ymaxn)) +
+    expand_limits(y = c(0, ymaxn)) +
+    theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5))
+  return(p)
+} 
+
+common_label_layers <- list(
+  geom_tile(color = "white", size = 0.15),
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.text = element_blank(),
+        strip.background = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, "npc")),
+  scale_y_discrete(expand = c(0, 0)),
+  labs(y = ""),
+  guides(fill = FALSE),
+  facet_grid(~patient_id, 
+             space = "free", scales = "free")
+)
+
+comp_label_site <- ggplot(distinct(comp_tbl_sample_sort, tumor_subsite_rx, therapy, tumor_supersite, label_supersite, patient_id), 
+       aes(tumor_subsite_rx, label_supersite, 
+           fill = tumor_supersite)) + 
+  scale_fill_manual(values = clrs$tumor_supersite) +
+  common_label_layers
+
+comp_label_rx <- ggplot(distinct(comp_tbl_sample_sort, tumor_subsite_rx, therapy, tumor_supersite, label_therapy, consensus_signature, patient_id), 
+       aes(tumor_subsite_rx, label_therapy, 
+           fill = therapy)) + 
+  scale_fill_manual(values = c(`post-Rx` = "gold3", `pre-Rx` = "steelblue")) +
+  common_label_layers
+
+comp_label_mutsig <- ggplot(distinct(comp_tbl_sample_sort, tumor_subsite_rx, therapy, tumor_supersite, label_mutsig, consensus_signature, patient_id), 
+       aes(tumor_subsite_rx, label_mutsig, 
+           fill = consensus_signature)) + 
+  scale_fill_manual(values = clrs$consensus_signature) +
+  common_label_layers
+
+patient_label_tbl <- distinct(comp_tbl_sample_sort, patient_id, .keep_all = T)
+
+comp_label_patient_id <- ggplot(patient_label_tbl, aes(tumor_subsite_rx, label_patient_id)) + 
+  scale_fill_manual(values = clrs$consensus_signature) +
+  geom_text(aes(tumor_subsite_rx, label_patient_id, label = patient_id)) +
+  facet_grid(~patient_id, 
+             space = "free", scales = "free") +
+  coord_cartesian(clip = "off") + 
+  theme_void() +
+  theme(strip.text = element_blank(),
+        strip.background = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, "npc"))
+
+hist_plot_wrapper <- function(x = "nrel") {
+  if (x == "nrel") {
+    xlab <- paste0("Fraction of cells [%]")
+    bw <- 5
+  }
+  if (x == "log10n") {
+    xlab <- paste0("Number of cells")
+    bw <- 0.2
+  }
+  p <- ggplot(comp_tbl_sample_sort) +
+    ggridges::geom_density_ridges(
+      aes_string(x, "cluster_label", fill = "cluster_label"), color = "black",
+      stat = "binline", binwidth = bw, scale = 3) +
+    facet_grid(label_supersite~., 
+               space = "free", scales = "free") +
+    scale_fill_manual(values = clrs$cluster_label[[coi]]) + 
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.title.y = element_blank(),
+          axis.line.y = element_blank(),
+          strip.text = element_blank(),
+          strip.background = element_blank(),
+          plot.margin = margin(0, 0, 0, 0, "npc")) +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_discrete(expand = c(0, 0)) +
+    guides(fill = FALSE) +
+    labs(x = xlab)
+  if (x == "log10n") p <- p + expand_limits(x = c(0, 3)) + 
+    scale_x_continuous(expand = c(0, 0), 
+                       labels = function(x) parse(text = paste("10^", x)))
+  return(p)
+}
+
+pcomp1 <- comp_plot_wrapper("n")
+pcomp2 <- comp_plot_wrapper("nrel")
+
+pcomp_grid <- plot_grid(comp_label_patient_id, 
+                        pcomp1, pcomp2, 
+                        comp_label_site, comp_label_rx, comp_label_mutsig,
+                        ncol = 1, align = "v", 
+                        rel_heights = c(0.15, 0.33, 0.33, 0.06, 0.06, 0.06))
+
+phist1 <- hist_plot_wrapper("log10n")
+
+pcomp_hist_grid <- ggdraw() +
+  draw_plot(pcomp_grid, x = 0.01, y = 0, width = 0.85, height = 1) +
+  draw_plot(phist1, x = 0.87, y = 0.05, width = 0.12, height = 0.8)
+
+pcomp_hist_grid
+# ggsave(paste0("_fig/02_composition_v7_",coi,".pdf"), pcomp_hist_grid, width = 10, height = 2)
+
+```
+
+### site specific cluster enrichment
+
+```{r chunk_140, fig.width=12, fig.height=4}
+
+comp_tbl_z <- comp_tbl_sample_sort %>% 
+  filter(therapy == "pre-Rx",
+         !(tumor_supersite %in% c("Ascites", "Other"))) %>% 
+  group_by(patient_id, cluster_label) %>% 
+  arrange(patient_id, cluster_label, nrel) %>% 
+  mutate(rank = row_number(nrel),
+         z_rank = scales::rescale(rank)) %>% 
+  mutate(mean_nrel = mean(nrel, na.rm = T),
+         sd_nrel = sd(nrel, na.rm = T),
+         z_nrel = (nrel - mean_nrel) / sd_nrel) %>% 
+  ungroup()
+
+ggplot(comp_tbl_z) +
+  geom_boxplot(aes(tumor_supersite, z_nrel, color = tumor_supersite), 
+               outlier.shape = NA) +
+  geom_point(aes(tumor_supersite, z_nrel, color = tumor_supersite), position = position_jitter(), size = 0.1) +
+  facet_grid(~cluster_label, scales = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        aspect.ratio = 5) +
+  scale_color_manual(values = clrs$tumor_supersite)
+
+ggplot(comp_tbl_z) +
+  geom_boxplot(aes(tumor_supersite, z_rank, color = tumor_supersite), 
+               outlier.shape = NA) +
+  geom_point(aes(tumor_supersite, z_rank, color = tumor_supersite), position = position_jitter(), size = 0.1) +
+  facet_grid(~cluster_label, scales = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        aspect.ratio = 5) +
+  scale_color_manual(values = clrs$tumor_supersite)
+
+```
+
+
+# session info
+
+```{r chunk_999}
+
+devtools::session_info()
+
+```
+

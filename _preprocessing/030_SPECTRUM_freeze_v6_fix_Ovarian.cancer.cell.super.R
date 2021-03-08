@@ -119,6 +119,8 @@ patient_specific_clusters <- FetchData(seu_obj_sub, c("patient_id", "RNA_snn_res
   as.character() %>% 
   unique
 
+seu_obj_sub
+
 write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_highqc.rds"))
 seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/", coi, "_highqc.rds"))
 
