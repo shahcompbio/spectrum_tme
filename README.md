@@ -71,7 +71,7 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [x] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
     - [x] Myeloid cells: run diffusion map on macrophage subset
 
-# output files and objects:
+## Output files and objects
 
 - [ ] major cell types
   - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Ovarian.cancer.super_processed_filtered_annotated.rds`
