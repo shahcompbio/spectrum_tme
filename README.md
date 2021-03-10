@@ -71,23 +71,24 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
     - [x] T cells: subcluster CD8 T cells and run diffusion map on CD8 subset
     - [x] Myeloid cells: run diffusion map on macrophage subset
 
-- [ ] output files and objects:
-    - [ ] major cell types
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Ovarian.cancer.super_processed_filtered_annotated.rds`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/T.super_processed_filtered_annotated.rds`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Myeloid.super_processed_filtered_annotated.rds`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Fibroblast.super_processed_filtered_annotated.rds`
-        - [ ] `B.super.annotated.rds`
-        - [ ] `Endothelial.cell.super.annotated.rds`
-    - [x] subset objects 
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/CD8.T_processed_filtered.rds`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/DCs_processed.rds`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Macrophages_processed.rds`
-    - [ ] supplementary marker tables
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Ovarian.cancer.super_marker_table_annotated.tsv`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/T.super_marker_table_annotated_full.tsv`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Myeloid.super_marker_table_annotated.tsv`
-        - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Fibroblast.super_marker_table_annotated.tsv`
+# output files and objects:
+
+- [ ] major cell types
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Ovarian.cancer.super_processed_filtered_annotated.rds`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/T.super_processed_filtered_annotated.rds`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Myeloid.super_processed_filtered_annotated.rds`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Fibroblast.super_processed_filtered_annotated.rds`
+  - [ ] `B.super.annotated.rds`
+  - [ ] `Endothelial.cell.super.annotated.rds`
+- [x] subset objects 
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/CD8.T_processed_filtered.rds`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/DCs_processed.rds`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Macrophages_processed.rds`
+- [ ] supplementary marker tables
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Ovarian.cancer.super_marker_table_annotated.tsv`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/T.super_marker_table_annotated_full.tsv`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Myeloid.super_marker_table_annotated.tsv`
+  - [x] `/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Fibroblast.super_marker_table_annotated.tsv`
 
 
 ## Plotting scripts
