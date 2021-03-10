@@ -94,10 +94,12 @@ seu_obj_sample <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/",
 Idents(seu_obj_sample) <- seu_obj_sample$RNA_snn_res.0.2
 marker_tbl_02_sample <- as_tibble(FindAllMarkers(seu_obj_sample, only.pos = T))
 write_tsv(marker_tbl_02_sample, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_highqc_markers_02_sample.tsv"))
+marker_tbl_02_sample <- read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_highqc_markers_02_sample.tsv"))
 
 Idents(seu_obj_sample) <- seu_obj_sample$RNA_snn_res.0.3
 marker_tbl_03_sample <- as_tibble(FindAllMarkers(seu_obj_sample, only.pos = T))
 write_tsv(marker_tbl_03_sample, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_highqc_markers_03_sample.tsv"))
+marker_tbl_03_sample <- read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_highqc_markers_03_sample.tsv"))
 
 
 

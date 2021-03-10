@@ -1,0 +1,126 @@
+---
+title: "MSK SPECTRUM TCGA consensus signatures for HGSOC per patient"
+author: "Florian Uhlitz"
+date: "Dec 1, 2020"
+output: 
+  html_document: 
+    df_print: kable
+    number_sections: yes
+    toc: yes
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+params: 
+  seu_obj_path: "/work/shah/uhlitzf/data/SPECTRUM/freeze/SPECTRUM-OV-002.rds"
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = F)
+
+```
+
+```{r chunk_010}
+
+library(magrittr)
+library(tidyverse)
+library(Seurat)
+library(readxl)
+library(cowplot)
+library(colorblindr)
+library(viridis)
+library(consensusOV)
+theme_cowplot2 <- function(...) {
+  theme_cowplot(font_size = 12, ...) %+replace%
+    theme(strip.background = element_blank(),
+          axis.line = element_blank(), 
+          panel.border = element_rect(linetype = 1, size = 1, color = "black"),
+          plot.background = element_blank())
+}
+
+```
+
+```{r chunk_015}
+
+# seu_obj <- read_rds("/work/shah/data/spectrum_scrna/freeze/merged_normalized.rdata")
+# 
+# split_seu <- function(x) {
+#   seu_obj_sub <- subset(seu_obj, cells = grep(x, colnames(seu_obj), value = T))
+#   write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/", x, ".rds"))
+# }
+# 
+# pids <- c("SPECTRUM-OV-002",
+# "SPECTRUM-OV-003",
+# "SPECTRUM-OV-007",
+# "SPECTRUM-OV-008",
+# "SPECTRUM-OV-009",
+# "SPECTRUM-OV-014",
+# "SPECTRUM-OV-022",
+# "SPECTRUM-OV-024",
+# "SPECTRUM-OV-025",
+# "SPECTRUM-OV-026",
+# "SPECTRUM-OV-028",
+# "SPECTRUM-OV-031",
+# "SPECTRUM-OV-036",
+# "SPECTRUM-OV-037",
+# "SPECTRUM-OV-041",
+# "SPECTRUM-OV-042",
+# "SPECTRUM-OV-045",
+# "SPECTRUM-OV-049",
+# "SPECTRUM-OV-050",
+# "SPECTRUM-OV-051",
+# "SPECTRUM-OV-052",
+# "SPECTRUM-OV-053",
+# "SPECTRUM-OV-054",
+# "SPECTRUM-OV-065",
+# "SPECTRUM-OV-067",
+# "SPECTRUM-OV-068",
+# "SPECTRUM-OV-070",
+# "SPECTRUM-OV-071",
+# "SPECTRUM-OV-075",
+# "SPECTRUM-OV-077")
+# 
+# sapply(pids, split_seu)
+
+```
+
+```{r chunk_020}
+
+## load data
+seu_obj_path <- params$seu_obj_path
+# seu_obj_path <- "/work/shah/uhlitzf/data/SPECTRUM/freeze/SPECTRUM-OV-002.rds"
+seu_obj <- read_rds(seu_obj_path)
+patient <- str_sub(colnames(seu_obj)[1], 0, 15)
+
+```
+
+# consensus OV signatures for `r patient`
+
+```{r chunk_030}
+
+entrez_ids <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db,
+                                    keys = rownames(seu_obj@assays$RNA@data),
+                                    columns = c("SYMBOL", "ENTREZID"),
+                                    keytype = "SYMBOL") %>%
+  distinct(SYMBOL, .keep_all = T)
+
+calc_covs <- function(seu_obj, colrange = 1:length(colnames(seu_obj))) {
+  entrez_counts <- seu_obj@assays$RNA@data[,colrange] %>%
+    as.matrix %>%
+    set_rownames(entrez_ids$ENTREZID) %>%
+    .[!is.na(rownames(.)),] %>% 
+    .[rowSums(.)!=0,]
+  covs <- get.subtypes(entrez_counts, rownames(entrez_counts), method = "consensusOV")
+  covs_tbl <- cbind(as.data.frame(covs[[2]]), covs[[1]]) %>% 
+    as_tibble(rownames = "cell_id") %>% 
+    setNames(c(names(.)[-6], "consensusOV"))
+  return(covs_tbl)
+}
+
+covs_tbl <- calc_covs(seu_obj)
+
+write_tsv(covs_tbl, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/consensusOV/", patient, "-freeze-consensusOV.tsv"))
+
+```
+

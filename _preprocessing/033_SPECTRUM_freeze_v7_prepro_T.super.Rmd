@@ -373,7 +373,7 @@ seu_obj$cluster_extended <- cluster_vector[seu_obj$cell_id] %>%
 seu_obj_sub$cluster_extended <- cluster_vector[seu_obj_sub$cell_id] %>%
   setNames(seu_obj_sub$cell_id)
 
-cluster_extended_uniq <- as.character(na.omit(unique(seu_obj_sub$cluster_extended)))
+cluster_extended_uniq <- sort(as.character(na.omit(unique(seu_obj_sub$cluster_extended))))
 
 Idents(seu_obj_sub) <- seu_obj_sub$cluster_extended
 Idents(seu_obj) <- seu_obj$cluster_extended
@@ -389,25 +389,26 @@ patient_specific_subcluster <- FetchData(seu_obj_sub, c("patient_id", "cluster_e
   distinct(cluster_extended, .keep_all = T) %>% 
   ungroup
 
-marker_tbl_extended <- lapply(
-  cluster_extended_uniq,
-  function(x) {
-    marker_tbl <- FindMarkers(seu_obj_sub, ident.1 = x) %>%
-      as_tibble(rownames = "gene") %>%
-      separate(gene, into = c("gene", "drop"), sep = "\\.\\.\\.") %>%
-      select(-drop) %>%
-      mutate(cluster_extended = x)
-    write_tsv(marker_tbl, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_marker_table_subcluster_", x, ".tsv"))
-    return(marker_tbl)
-}) %>% bind_rows
-
-write_tsv(marker_tbl_extended, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_marker_table_annotated_extended.tsv"))
+# marker_tbl_extended <- lapply(
+#   cluster_extended_uniq,
+#   function(x) {
+#     marker_tbl <- FindMarkers(seu_obj_sub, ident.1 = x) %>%
+#       as_tibble(rownames = "gene") %>%
+#       separate(gene, into = c("gene", "drop"), sep = "\\.\\.\\.") %>%
+#       select(-drop) %>%
+#       mutate(cluster_extended = x)
+#     write_tsv(marker_tbl, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_marker_table_subcluster_", x, ".tsv"))
+#     return(marker_tbl)
+# }) %>% bind_rows
+# 
+# write_tsv(marker_tbl_extended, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_marker_table_annotated_extended.tsv"))
 
 marker_tbl_extended <- read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_marker_table_annotated_extended.tsv"))
- 
+
 cluster_label_extended <- c(
-  CD4.T.naive_0 = "CD4.T.naive.centr.mem", 
-  CD4.T.naive_1 = "CD4.T.effector.memory", 
+  CD4.T.naive_0 = "CD4.T.effector.memory", 
+  CD4.T.naive_1 = "CD4.T.naive.centr.mem.2", ############## updated in v7
+  CD4.T.naive_2 = "CD4.T.naive.centr.mem.1", ############## updated in v7
   CD4.T.CXCL13_0 = "CD4.T.dysfunc.early", 
   CD4.T.CXCL13_1 = "CD4.T.dysfunc.late.1", 
   CD4.T.CXCL13_2 = "CD4.T.dysfunc.late.2", 
@@ -417,6 +418,7 @@ cluster_label_extended <- c(
   CD4.T.reg_3 = "CD4.T.reg.3", 
   CD4.Th17_0 = "CD4.Th17.1", 
   CD4.Th17_1 = "CD4.Th17.2", 
+  CD4.Th17_2 = "CD4.Th17.3", ############## updated in v7
   CD8.T.cytotoxic_0 = "CD8.T.effector.memory", 
   CD8.T.cytotoxic_1 = "CD8.T.cytotoxic", 
   CD8.T.cytotoxic_2 = "dissociated_3", 
@@ -426,18 +428,21 @@ cluster_label_extended <- c(
   CD8.T.CXCL13_0 = "CD8.T.dysfunc.early", 
   CD8.T.CXCL13_1 = "CD8.T.dysfunc.late", 
   CD8.T.CXCL13_2 = "NK.reg.CRTAM", 
-  CD8.T.ISG_0 = "CD8.T.ISG", 
+  CD8.T.ISG_0 = "CD8.T.ISG.early", ############# updated in v7
   CD8.T.ISG_1 = "CD4.T.ISG", 
-  CD8.T.ISG_2 = "dissociated_4", 
-  CD8.T.ISG_4 = "OV.009.specific",
+  CD8.T.ISG_2 = "CD8.T.dysfunc.ISG", ############# updated in v7
+  CD8.T.ISG_3 = "CD8.T.ISG.late", ############# updated in v7
+  CD8.T.ISG_4 = "OV.009.specific", ############## updated in v7
   NK.CD56_0 = "NK.reg.IGFBP2",
   NK.CD56_1 = "NK.reg.CD56", 
   NK.CD56_2 = "NK.reg.ISG", 
-  NK.CD56_3 = "NK.reg.KRT81.KRT86", 
-  NK.CD56_4 = "NK.reg.CCL3",
+  NK.CD56_3 = "NK.reg.KRT81.KRT86.1", ############## updated in v7
+  NK.CD56_4 = "NK.reg.KRT81.KRT86.2", ############## updated in v7
+  NK.CD56_5 = "NK.reg.CCL3",
   NK.cytotoxic_0 = "NK.cytotoxic.SPON2.2", 
   NK.cytotoxic_1 = "NK.cytotoxic.GZMH", 
   NK.cytotoxic_2 = "NK.cytotoxic.SPON2.1",
+  NK.cytotoxic_3 = "dissociated_4", ############## updated in v7
   Cycling.T.NK_0 = "Cycling.CD8.T.1",
   Cycling.T.NK_1 = "Cycling.CD8.T.2", 
   Cycling.T.NK_2 = "Cycling.CD8.T.3", 
@@ -486,11 +491,11 @@ marker_tbl_extended_annotated <- marker_tbl_extended %>%
   arrange(cluster_label_sub, desc(avg_logFC))
 
 if (cell_sort == "CD45+") {
-cells_to_keep <- colnames(seu_obj_sub)[!(str_detect(seu_obj_sub$cluster_label_sub, "dissociated|doublet")) & !(str_detect(seu_obj_sub$cell_id, "CD45N"))]
+cells_to_keep <- colnames(seu_obj_sub)[!(str_detect(seu_obj_sub$cluster_label_sub, "dissociated|doublet|specific")) & !(str_detect(seu_obj_sub$cell_id, "CD45N"))]
 }
 
 if (cell_sort == "CD45-") {
-cells_to_keep <- colnames(seu_obj_sub)[!(str_detect(seu_obj_sub$cluster_label_sub, "dissociated|doublet")) & !(str_detect(seu_obj_sub$cell_id, "CD45P"))]
+cells_to_keep <- colnames(seu_obj_sub)[!(str_detect(seu_obj_sub$cluster_label_sub, "dissociated|doublet|specific")) & !(str_detect(seu_obj_sub$cell_id, "CD45P"))]
 }
 
 
@@ -558,38 +563,38 @@ signature_modules_cin <- yaml::read_yaml("_data/small/signatures/cgas_sting.yaml
   .[lapply(., length) > 1] %>% 
   setNames(paste0(names(.), ".module"))
 
-## compute expression module scores
-for (i in 1:length(signature_modules_cd8)) {
-  seu_obj_sub_sub <- AddModuleScore(seu_obj_sub_sub, features = signature_modules_cd8[i], name = names(signature_modules_cd8)[i])
-  seu_obj_sub_sub[[names(signature_modules_cd8)[i]]] <- seu_obj_sub_sub[[paste0(names(signature_modules_cd8)[i], "1")]]
-  seu_obj_sub_sub[[paste0(names(signature_modules_cd8)[i], "1")]] <- NULL
-  print(paste(names(signature_modules_cd8)[i], "DONE"))
-}
-
-for (i in 1:length(signature_modules_cin)) {
-  seu_obj_sub_sub <- AddModuleScore(seu_obj_sub_sub, features = signature_modules_cin[i], name = names(signature_modules_cin)[i])
-  seu_obj_sub_sub[[names(signature_modules_cin)[i]]] <- seu_obj_sub_sub[[paste0(names(signature_modules_cin)[i], "1")]]
-  seu_obj_sub_sub[[paste0(names(signature_modules_cin)[i], "1")]] <- NULL
-  print(paste(names(signature_modules_cin)[i], "DONE"))
-}
-
-
-## compute progeny scores
-progeny_list <- seu_obj_sub_sub@assays$RNA@data[VariableFeatures(seu_obj_sub_sub),] %>%
-  as.matrix %>%
-  progeny %>%
-  as.data.frame %>%
-  as.list
-
-names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
-
-for (i in 1:length(progeny_list)) {
-  seu_obj_sub_sub <- AddMetaData(seu_obj_sub_sub,
-                                 metadata = progeny_list[[i]],
-                                 col.name = names(progeny_list)[i])
-}
-
-write_rds(seu_obj_sub_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
+# ## compute expression module scores
+# for (i in 1:length(signature_modules_cd8)) {
+#   seu_obj_sub_sub <- AddModuleScore(seu_obj_sub_sub, features = signature_modules_cd8[i], name = names(signature_modules_cd8)[i])
+#   seu_obj_sub_sub[[names(signature_modules_cd8)[i]]] <- seu_obj_sub_sub[[paste0(names(signature_modules_cd8)[i], "1")]]
+#   seu_obj_sub_sub[[paste0(names(signature_modules_cd8)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cd8)[i], "DONE"))
+# }
+# 
+# for (i in 1:length(signature_modules_cin)) {
+#   seu_obj_sub_sub <- AddModuleScore(seu_obj_sub_sub, features = signature_modules_cin[i], name = names(signature_modules_cin)[i])
+#   seu_obj_sub_sub[[names(signature_modules_cin)[i]]] <- seu_obj_sub_sub[[paste0(names(signature_modules_cin)[i], "1")]]
+#   seu_obj_sub_sub[[paste0(names(signature_modules_cin)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cin)[i], "DONE"))
+# }
+# 
+# 
+# ## compute progeny scores
+# progeny_list <- seu_obj_sub_sub@assays$RNA@data[VariableFeatures(seu_obj_sub_sub),] %>%
+#   as.matrix %>%
+#   progeny %>%
+#   as.data.frame %>%
+#   as.list
+# 
+# names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
+# 
+# for (i in 1:length(progeny_list)) {
+#   seu_obj_sub_sub <- AddMetaData(seu_obj_sub_sub,
+#                                  metadata = progeny_list[[i]],
+#                                  col.name = names(progeny_list)[i])
+# }
+# 
+# write_rds(seu_obj_sub_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
 
 seu_obj_sub_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
 
@@ -915,7 +920,7 @@ write_rds(seu_obj_cd8, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/CD8.T_process
 
 ```{r chunk_170, fig.width=12, fig.height=4}
 
-root_cell <- "SPECTRUM-OV-041_S1_CD45P_RIGHT_FALLOPIAN_TUBE_ACCCTCATCCAAGCAT"
+root_cell <- "SPECTRUM-OV-045_S1_CD45P_LEFT_OVARY_TCATTCAGTAGTCGGA"
 seu_obj_cd8_sub <- subset(seu_obj_cd8, cells = c(root_cell, colnames(seu_obj_cd8)[colnames(seu_obj_cd8)!=root_cell][-1]))
 
 dc_obj <- DiffusionMap(seu_obj_cd8_sub@reductions$harmony@cell.embeddings, k = 100)

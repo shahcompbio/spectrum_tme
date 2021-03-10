@@ -63,7 +63,7 @@ Phase:
 patient_id: 
   SPECTRUM-OV-002: "#ee2f00"
   SPECTRUM-OV-003: "#ee2f24"
-  SPECTRUM-OV-004: "#ef3e24"
+  SPECTRUM-OV-004: "#ef3e24" ######### updated in v7
   SPECTRUM-OV-007: "#f04e23"
   SPECTRUM-OV-008: "#f37120"
   SPECTRUM-OV-009: "#f7951e"
@@ -78,7 +78,7 @@ patient_id:
   SPECTRUM-OV-041: "#75c000"
   SPECTRUM-OV-042: "#6dbe00"
   SPECTRUM-OV-045: "#6dbe45"
-  SPECTRUM-OV-046: "#6fbe45"
+  SPECTRUM-OV-046: "#6fbe45" ######### updated in v7
   SPECTRUM-OV-049: "#71bf44"
   SPECTRUM-OV-050: "#70c166"
   SPECTRUM-OV-051: "#6fc48c"
@@ -104,8 +104,8 @@ patient_id:
   SPECTRUM-OV-110: "#ec1472"
   SPECTRUM-OV-112: "#ed1b50"
   SPECTRUM-OV-115: "#ed1e2e"
-  SPECTRUM-OV-116: "#cd0000"
-  SPECTRUM-OV-118: "#b00000"
+  SPECTRUM-OV-116: "#cd0000" ######### updated in v7
+  SPECTRUM-OV-118: "#b00000" ######### updated in v7
 cluster_label:
   T.super:
     CD4.T.naive: "#ff8a8a"
@@ -134,19 +134,22 @@ cluster_label:
     Cycling.B: "#FF8F00"
     Cycling.Plasma: "#d9ad7c"
   Myeloid.super:
-    M1.S100A8: "#77a1cd"
-    M1.S100A9: "#3285bc"
-    M1.CDKN1C: "#8ed8ee"
-    M1.CXCL10: "#7e52aa"
-    M2.SELENOP: "#91cf67"
-    M2.MARCO: "#50bd5f"
-    M.stressed: "#5fcaa9"
     cDC1: "#ab1500"
     cDC2: "#ff2500"
     mDC: "#ff2e99"
     pDC: "#eb9999"
     Mast.cell: "#d65e00"
-    Neutrophil: "#ded372"
+    # Neutrophil: "#ded372"
+    M1.S100A8: "#77a1cd"
+    # M1.S100A9: "#3285bc"
+    # M1.CDKN1C: "#8ed8ee"
+    M2.CXCL10: "#47eeb8"
+    M2.SELENOP: "#91cf67"
+    M2.MARCO: "#3d9f4b"
+    M2.ECM.1: "#a550bd"
+    M2.ECM.2: "#dd66ff"
+    # M.stressed: "#5fcaa9"
+    Clearing.M: "#46ccff"
     Cycling.M: "#FF8F00"
   Endothelial.super:
     Arterial.EC: "#9c0a00"
@@ -158,13 +161,13 @@ cluster_label:
     Quiescent.EC: "#8c6168"
     Cycling.EC: "#FF8F00"
   Fibroblast.super:
-    Early.CAF: "#BA68C8"
+    Early.CAF.1: "#e057f7" ######### updated in v7
+    Early.CAF.2: "#9e00b9" ######### updated in v7
     Activated.CAF.ISG: "#7E57C2"
     Activated.CAF.TGFb: "#6C3483"
-    Activated.CAF.WNT: "#00ff00"
+    Activated.CAF.IGF1: "#3500cf"
     Angiogenic.CAF: "#C62828"
     Mesothelial.CAF.IL1: "#E91E63"
-    Mesothelial.CAF.MTP: "#ff4dff"
     Cycling.CAF: "#FF8F00"
     Pericyte: "#009688"
   Ovarian.cancer.super:
@@ -178,7 +181,7 @@ cluster_label:
     Cycling.cancer.cell.2: "#ffc98d"
     Ciliated.cell.1: "#03c9fc"
     Ciliated.cell.2: "#c3c4e0"
-    Ciliated.cell.3: "#0272b1"
+    # Ciliated.cell.3: "#0272b1"
 cluster_label_sub:
   T.super:
     # CD4.T.naive: "#ff8a8a"
@@ -192,7 +195,8 @@ cluster_label_sub:
     # NK.CD56: "#4FC3F7"
     # NK.cytotoxic: "#00ACC1"
     # Cycling.T.NK: "#FF8F00"
-    CD4.T.naive.centr.mem: "#ffc2c2"
+    CD4.T.naive.centr.mem.1: "#995858" ######### updated in v7
+    CD4.T.naive.centr.mem.2: "#ffc2c2" ######### updated in v7
     CD4.T.effector.memory: "#ff6b6b"
     CD4.T.dysfunc.early: "#ff0000"
     CD4.T.dysfunc.late.1: "#b30000"
@@ -204,12 +208,15 @@ cluster_label_sub:
     CD4.T.reg.ISG: "#5c4295"
     CD4.Th17.1: "#ffbe00"
     CD4.Th17.2: "#b68800"
+    CD4.Th17.3: "#e48b00" ######### updated in v7
     CD8.T.naive.centr.mem: "#52ff52"
     CD8.T.effector.memory: "#27af27"
     CD8.T.cytotoxic: "#005c00"
     CD8.T.dysfunc.early: "#b9cf8c"
     CD8.T.dysfunc.late: "#659400"
-    CD8.T.ISG: "#324a00"
+    CD8.T.dysfunc.ISG: "#99e300" ######### updated in v7
+    CD8.T.ISG.early: "#324a00" ######### updated in v7
+    CD8.T.ISG.late: "#000000" ######### updated in v7
     gd.T.cell: "#817100"
     NK.cytotoxic.GZMH: "#00016b"
     NK.cytotoxic.SPON2.1: "#4848ff"
@@ -217,7 +224,8 @@ cluster_label_sub:
     NK.reg.IGFBP2: "#005c58"
     NK.reg.CD56: "#00b8b0"
     NK.reg.CCL3: "#00fff5"
-    NK.reg.KRT81.KRT86: "#008fb6"
+    NK.reg.KRT81.KRT86.1: "#008fb6" ######### updated in v7
+    NK.reg.KRT81.KRT86.2: "#4cd1f5" ######### updated in v7
     NK.reg.ISG: "#05d5aa"
     NK.reg.CRTAM: "#007a61"
     Cycling.CD4.T: "#d58805"

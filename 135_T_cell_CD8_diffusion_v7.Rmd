@@ -56,32 +56,33 @@ source("_src/global_vars.R")
 
 # meta_tbl
 # clrs
-# markers_v6
-# markers_v6_super
+# markers_v7
+# markers_v7_super
 # cell_type_super_lookup
 
 ```
 
 ```{r chunk_030}
 
-seu_obj_cd8_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_processed_filtered.rds")
+seu_obj_cd8_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/CD8.T_processed_filtered.rds")
 
-seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Ovarian.cancer.cell_processed_filtered.rds")
+seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Ovarian.cancer.super_processed_filtered_annotated.rds")
 
-# seu_obj_ml <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/Myeloid.super_processed_filtered_annotated.rds")
+# seu_obj_ml <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Myeloid.super_processed_filtered_annotated.rds")
 
 module_names <- grep("pathway|CD8", colnames(seu_obj_cd8_sub@meta.data), value = T)
 
 gois <- c("TCF7", "GZMK", "ISG15", "CXCL13", "TOX", "PDCD1")
 
-module_names_sub <- c("CD8.Naive", "CD8.Cytotoxic", "CD8.Predysfunctional", "CD8.Dysfunctional", "JAK.STAT.pathway")
+module_names_sub <- c("CD8.Naive.module", "CD8.Cytotoxic.module", "CD8.Predysfunctional.module", "CD8.Dysfunctional.module", "JAK.STAT.pathway")
 
 myfeatures <- c("cell_id", "umapharmony_1", "umapharmony_2", "sample", "DC_1", "DC_2", "DPT1",  "cell_type", "cluster_label_sub")
 
 my_subtypes <- names(clrs$cluster_label_sub[[coi]])
 
 plot_data <- as_tibble(FetchData(seu_obj_cd8_sub, c(myfeatures, module_names, gois))) %>%
-  mutate(DC_1 = -DC_1, DC_2 = -DC_2) %>% 
+  # mutate(DC_1 = -DC_1, DC_2 = -DC_2) %>% 
+  mutate(DC_1 = -DC_1, DC_2 = DC_2) %>% 
   gather(key, value, -c(1:length(myfeatures))) %>% 
   left_join(meta_tbl, by = "sample") %>%
   mutate(cell_type_super = cell_type_super_lookup[cell_type]) %>%
@@ -220,13 +221,13 @@ dc_plot_mutsig <- ggplot() +
 
 # plot_data_smooth <- plot_data %>%
 #   # filter(key %in% "TCF7") %>%
-#   # sample_n(10000) %>% 
+#   # sample_n(10000) %>%
 #   group_by(key) %>%
 #   arrange(DPT1) %>%
-#   mutate(DPT1_bin = as.numeric(cut_number(DPT1, 10000))) %>% 
+#   mutate(DPT1_bin = as.numeric(cut_number(DPT1, 10000))) %>%
 #   group_by(key, DPT1_bin) %>%
-#   mutate(mean_value = mean(value)) %>% 
-#   distinct(key, DPT1_bin, .keep_all = T) %>% 
+#   mutate(mean_value = mean(value)) %>%
+#   distinct(key, DPT1_bin, .keep_all = T) %>%
 #   group_by(key) %>%
 #   do(fit = {
 #     loess(mean_value ~ DPT1_bin, data = .) %>%
@@ -240,12 +241,13 @@ dc_plot_mutsig <- ggplot() +
 #          se_upper = scaled_value+scaled_value/fit*se.fit,
 #          se_lower = scaled_value-scaled_value/fit*se.fit)
 # 
-# write_tsv(plot_data_smooth, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_fitted_module_curves.tsv")
-plot_data_smooth <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/CD8.T_fitted_module_curves.tsv")
+# write_tsv(plot_data_smooth, "/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/CD8.T_fitted_module_curves.tsv")
+plot_data_smooth <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/CD8.T_fitted_module_curves.tsv")
 
 module_curves_module <- plot_data_smooth %>% 
   filter(key %in% module_names_sub) %>%
-  mutate(key = ordered(key, levels = names(clrs$expression_module))) %>% 
+  mutate(key = ordered(str_remove_all(key, ".module"), 
+                       levels = names(clrs$expression_module))) %>% 
   ggplot() +
   geom_line(aes(DPT1_bin, scaled_value, color = key), size = 1.5)+
   labs(x = "Pseudotime", y = "Scaled module score", color = "Module") +
@@ -286,6 +288,7 @@ mutsig_boxplot_data <- plot_data %>%
   mutate(key = str_replace_all(key, "CD8\\.", "CD8\n")) %>% 
   mutate(key = str_replace_all(key, "JAK.STAT.pathway", "JAK/STAT\npathway")) %>% 
   mutate(key = str_replace_all(key, "ysfunctional", "ysfunct.")) %>% 
+  mutate(key = str_remove_all(key, ".module")) %>% 
   mutate(key = ordered(key, levels = c("CD8\nNaive", "CD8\nPredysfunct.", "CD8\nCytotoxic", "CD8\nDysfunct.", "JAK/STAT\npathway")))
 
 mutsig_boxplot_data_stats <- mutsig_boxplot_data %>% 
@@ -389,8 +392,8 @@ patient_boxplot_list <- lapply(module_names_sub, patient_boxplot_wrapper) %>%
   
 ggdraw() +
   draw_plot(add_umap_coord(dc_plot_cluster + guides(color = F)), 
-            x = 0.01, y = 0, width = 0.1, height = 0.65) +
-  draw_plot(cowplot::get_legend(dc_plot_cluster), x = 0.01, y = 0.25) +
+            x = 0.01, y = 0, width = 0.1, height = 0.5) +
+  draw_plot(cowplot::get_legend(dc_plot_cluster), x = 0.01, y = 0.21) +
   draw_plot(dc_plot_genes, 
             x = 0.12, y = 0, width = 0.22, height = 1) +
   draw_plot(module_curves_module, x = 0.36, y = 0, width = 0.25, height = 1) +
@@ -430,7 +433,7 @@ plot_data_cc <- as_tibble(FetchData(seu_obj_cc, c("sample", "JAK.STAT.pathway", 
   ungroup %>% 
   mutate(sample = str_remove_all(sample, "_CD45N|_CD45P"))
 
-plot_data_cor <- as_tibble(FetchData(seu_obj_cd8_sub, c("sample", "JAK.STAT.pathway", "CD8.Dysfunctional"))) %>% 
+plot_data_cor <- as_tibble(FetchData(seu_obj_cd8_sub, c("sample", "JAK.STAT.pathway", "CD8.Dysfunctional.module"))) %>% 
   gather(key_tc, value, -sample) %>% 
   left_join(meta_tbl, by = "sample") %>% 
   filter(sort_short == "CD45+") %>% 
@@ -441,7 +444,7 @@ plot_data_cor <- as_tibble(FetchData(seu_obj_cd8_sub, c("sample", "JAK.STAT.path
   inner_join(plot_data_cc, by = "sample")
 
 cor_plot1 <- plot_data_cor %>% 
-  filter(key_tc == "CD8.Dysfunctional", key_cc == "CD274") %>% 
+  filter(key_tc == "CD8.Dysfunctional.module", key_cc == "CD274") %>% 
   ggplot() +
   geom_point(aes(mean_value_cc, mean_value_tc, color = consensus_signature)) +
   geom_smooth(aes(mean_value_cc, mean_value_tc), method = "lm", se = T,
@@ -476,7 +479,7 @@ ggsave("_fig/004_T_cell/004_tcell_cancer_cell_correlation.pdf", cor_plot_grid, w
 
 ### scRNA
 
-```{r chunk_180, fig.width=18, fig.height=6}
+```{r chunk_180, fig.width=24, fig.height=6}
 
 source("_src/comp_plot.R")
 
@@ -511,7 +514,15 @@ plist5 <- default_comp_grid_list(
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 plist6 <- default_comp_grid_list(
-  comp_tbl_cd8, cluster_label_sub, "CD8.T.ISG", nmax = 2000, 
+  comp_tbl_cd8, cluster_label_sub, "CD8.T.dysfunc.ISG", nmax = 2000, 
+  cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
+
+plist7 <- default_comp_grid_list(
+  comp_tbl_cd8, cluster_label_sub, "CD8.T.ISG.early", nmax = 2000, 
+  cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
+
+plist8 <- default_comp_grid_list(
+  comp_tbl_cd8, cluster_label_sub, "CD8.T.ISG.late", nmax = 2000, 
   cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
 
 comp_grid1 <- plot_grid(plotlist = plist1, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.25, 0.35))
@@ -526,10 +537,14 @@ comp_grid5 <- plot_grid(plotlist = plist5, ncol = 1, align = "v", rel_heights = 
 
 comp_grid6 <- plot_grid(plotlist = plist6, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.25, 0.35))
 
-pg <- plot_grid(comp_grid1, comp_grid2, comp_grid3, comp_grid4, comp_grid5, comp_grid6, ncol = 6)
+comp_grid7 <- plot_grid(plotlist = plist7, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.25, 0.35))
+
+comp_grid8 <- plot_grid(plotlist = plist8, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.25, 0.35))
+
+pg <- plot_grid(comp_grid1, comp_grid2, comp_grid3, comp_grid4, comp_grid5, comp_grid6, comp_grid7, comp_grid8, ncol = 8)
 pg
 
-ggsave("_fig/004_T_cell/004_CD8.T.cell_composition.pdf", pg, width = 18, height = 6)
+ggsave("_fig/004_T_cell/004_CD8.T.cell_composition.pdf", pg, width = 24, height = 6)
 
 ```
 

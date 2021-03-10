@@ -264,7 +264,7 @@ Myeloid.super:
   - S100A8
   - AREG
   - EREG
-  M1.CXCL10:
+  M2.CXCL10:
   - CXCL10	
   - CXCL11
   - CCL8
@@ -285,6 +285,22 @@ Myeloid.super:
   - TGM2
   - HAMP
   - LYVE1
+  M2.ECM.1:
+  - COL1A1 # https://link.springer.com/article/10.1186/1471-2172-10-57
+  - COL1A2
+  - COL3A1
+  - CALD1
+  - SPARC
+  - SELENOP
+  - TAGLN
+  M2.ECM.2:
+  - MMP9 # https://link.springer.com/article/10.1186/1471-2172-10-57
+  - CTSK
+  - ACP5
+  - SLC9B2
+  - ANPEP
+  - SPARC
+  - ANKH
   Mast.cell:
   - KIT
   - CPA3
@@ -326,6 +342,14 @@ Myeloid.super:
   - CSF3R
   - NAMPT
   - TXNIP
+  Clearing.M:
+  - IL32
+  - CCL5
+  - CD2
+  - GZMA
+  - CD3D
+  - NKG7
+  - TRAC
   Cycling.M:
   - MKI67
   - TOP2A
@@ -349,6 +373,9 @@ Myeloid.super:
   - EGR1
   - KLF2
   - BTG1
+  - MTRNR2L12
+  - MTRNR2L8
+  - IGKC
 Endothelial.super:
   Arterial.EC:
   - EFNB2 # 18972135
@@ -448,7 +475,7 @@ Fibroblast.super:
   - CYR61
   - ATF3
   - FBLN1
-  Early.CAF:
+  Early.CAF.1:
   - CFD 
   - C7
   - APOD
@@ -456,6 +483,14 @@ Fibroblast.super:
   - MGP
   - PEG3
   - ACKR4 
+  Early.CAF.2:
+  - C7
+  - RBP1
+  - IGFBP5
+  - RNASE1
+  - PEG3
+  - CADPS
+  - LAMP5
   Cycling.CAF:
   - MKI67
   - TOP2A
@@ -486,19 +521,6 @@ Fibroblast.super:
   - BNIP3
   - HILPDA
   - LDHA
-  OV.075.CAF:
-  - WNT5A
-  - WNT10A
-  - MMP1
-  - RARRES2
-  - DIO2
-  - TDO2
-  OV.105.CAF:
-  - MT1E
-  - MT1X
-  - MT1G
-  - MT3
-  - MT2A
   dissociated:
   - IGKC
   - MALAT1

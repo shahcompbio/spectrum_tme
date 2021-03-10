@@ -327,7 +327,7 @@ for(i in 1:length(tcga_subtypes)){
 
 ```{r chunk_090, fig.width=3, fig.height=12}
 
-cois <- c("T.super", "Myeloid.super", "Fibroblast.super", "Ovarian.cancer.cell")
+cois <- c("T.super", "Myeloid.super", "Fibroblast.super", "Ovarian.cancer.super")
 
 read_comp_wrapper <- function(x, cluster_column) {
   cluster_column <- enquo(cluster_column)
@@ -432,14 +432,14 @@ for(i in 1:length(Fibroblast.super.clusters)){
 
 ```{r chunk_130, fig.width=3.5, fig.height=10, results="asis"}
 
-Cancer.super.clusters <- sort(unique(comp_list$Ovarian.cancer.cell$cluster_label))
+Cancer.super.clusters <- sort(unique(comp_list$Ovarian.cancer.super$cluster_label))
 
 for(i in 1:length(Cancer.super.clusters)){
   
   cat('#### ', Cancer.super.clusters[i],' \n')
   
   plist <- default_comp_grid_list(
-    filter(comp_list$Ovarian.cancer.cell, sort_short_x == "CD45-"), 
+    filter(comp_list$Ovarian.cancer.super, sort_short_x == "CD45-"), 
     cluster_label, Cancer.super.clusters[i], cluster_label, 
     super_type = "Ovarian.cancer.super")
   

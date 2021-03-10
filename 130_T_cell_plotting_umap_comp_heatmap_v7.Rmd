@@ -67,38 +67,41 @@ source("_src/global_vars.R")
 
 # meta_tbl
 # clrs
-# markers_v6
-# markers_v6_super
+# markers_v7
+# markers_v7_super
 # cell_type_super_lookup
 
 ```
 
 ```{r chunk_030}
 
-myfeatures <- c("UMAP_1", "UMAP_2", "umapharmony_1", "umapharmony_2", "sample", "doublet", "nCount_RNA", "nFeature_RNA", "percent.mt", "doublet_score", "cell_type")
+myfeatures <- c("UMAP_1", "UMAP_2", "umapharmony_1", "umapharmony_2", "sample", "doublet", "nCount_RNA", "nFeature_RNA", "percent.mt", "doublet_score", "cell_type", "cluster_label_sub")
 
-seu_obj_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/T.super_processed_filtered_sub.rds")
+seu_obj_sub <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/T.super_processed_filtered_annotated.rds")
 
-marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/T.super_marker_table_annotated_full.tsv")
+marker_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/T.super_marker_table_annotated_full.tsv")
 
 marker_tbl_top <- marker_tbl %>% 
-  filter(avg_logFC > 1,
+  filter(avg_logFC > 0.5,
          p_val_adj < 0.01,
          pct.1 > 0.2,
          pct.2 < 0.8,
          !is.na(cluster_label_sub),
-         !str_detect(gene, "^RPS|^RPL"))
+         !str_detect(gene, "^RPS|^RPL")) %>% 
+  group_by(cluster_label_sub) %>% 
+  slice(1:50)
 
-marker_sheet <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v6/supplementary_tables/T.super_marker_sheet_full.tsv")
+marker_sheet <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/T.super_marker_sheet_full.tsv")
 
 my_subtypes <- names(clrs$cluster_label_sub[[coi]])
 
-plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, "cluster_label_sub"))) %>% 
+plot_data_sub <- as_tibble(FetchData(seu_obj_sub, c(myfeatures))) %>% 
   left_join(meta_tbl, by = "sample") %>% 
   mutate(cell_type_super = cell_type_super_lookup[cell_type]) %>% 
   mutate(sort_short = str_remove_all(sort_parameters, "singlet, live, ")) %>% 
   mutate(sort_short_x = ifelse(sort_short == "U" & cell_type_super == "Immune", 
-                               "CD45+", ifelse(sort_short == "U" & cell_type_super == "Stromal", "CD45-", sort_short)))
+                               "CD45+", ifelse(sort_short == "U" & cell_type_super == "Stromal", "CD45-", sort_short))) %>% 
+  mutate(cluster_label_sub = ordered(cluster_label_sub, levels = names(clrs$cluster_label_sub[[coi]])))
   
 plot_data_sub <- filter(plot_data_sub, sort_short_x == cell_sort, !is.na(tumor_supersite))
 
@@ -151,9 +154,19 @@ add_umap_coord <- function(gg_obj, x = 0, y = 0, width = 0.3, height = 0.3, size
 
 ```{r chunk_60, fig.width=7, fig.height=4}
 
+plot_data_label <- plot_data_sub %>% 
+  group_by(cluster_label_sub) %>% 
+  summarise(umapharmony_1 = median(umapharmony_1),
+            umapharmony_2 = median(umapharmony_2)) %>% 
+  mutate(cluster_number = as.numeric(cluster_label_sub))
+
 umap_cell_type <- ggplot(plot_data_sub, aes(umapharmony_1, umapharmony_2, color = cluster_label_sub)) + 
   common_layers_disc +
-  #facet_wrap(~cluster_label_sub) +
+  #facet_wrap(~cluster_label_sub) + 
+  geom_point(aes(umapharmony_1, umapharmony_2), color = "white",
+             data = plot_data_label, alpha = 0.5, size = 6) +
+  geom_text(aes(umapharmony_1, umapharmony_2, label = cluster_number), color = "black",
+             data = plot_data_label) +
   scale_color_manual(values = clrs$cluster_label_sub[[coi]], labels = str_remove_all(names(clrs$cluster_label_sub[[coi]]), "functional|ivated")[-4]) +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1), nrow = 12))
 
@@ -169,11 +182,116 @@ umap_site_legend <- cowplot::get_legend(umap_site)
 
 ```
 
+## module heatmap
+
+```{r chunk_65, fig.width=15, fig.height=5}
+
+module_names <- grep("pathway|CD8", colnames(seu_obj_sub@meta.data), value = T)
+
+plot_data_modules <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, module_names))) %>% 
+  gather(pathway, value, -c(1:length(myfeatures))) %>% 
+  left_join(meta_tbl, by = "sample") %>% 
+  mutate(cell_type_super = cell_type_super_lookup[cell_type]) %>% 
+  mutate(sort_short = str_remove_all(sort_parameters, "singlet, live, ")) %>% 
+  mutate(sort_short_x = ifelse(sort_short == "U" & cell_type_super == "Immune", 
+                               "CD45+", ifelse(sort_short == "U" & cell_type_super == "Stromal", "CD45-", sort_short))) %>% 
+  mutate(cluster_label_sub = ordered(cluster_label_sub, levels = names(clrs$cluster_label_sub[[coi]]))) %>% 
+  mutate(key_group = ifelse(str_detect(pathway, "pathway"), "pathway", "module")) %>% 
+  mutate(pathway = str_remove_all(pathway, ".pathway|.module")) %>% 
+  mutate(cluster_label_super = case_when(
+    str_detect(cluster_label_sub, "^CD4") ~ "CD4",
+    str_detect(cluster_label_sub, "^CD8") ~ "CD8",
+    str_detect(cluster_label_sub, "^NK") ~ "NK",
+    str_detect(cluster_label_sub, "^Cycling") ~ "Cycling",
+    T ~ "Other"
+    )) %>% 
+  mutate(cluster_label_super = ordered(cluster_label_super, levels = c("CD4", "CD8", "Other", "NK", "Cycling")))
+  
+plot_data_modules <- filter(plot_data_modules, sort_short_x == cell_sort, !is.na(tumor_supersite))
+
+plot_data_modules_summary_sample <- plot_data_modules %>% 
+  group_by(pathway, key_group, sample, patient_id_short, cluster_label_sub, cluster_label_super) %>% 
+  summarise(mean_score = mean(value, na.rm = T)) %>% 
+  ungroup
+
+plot_data_modules_summary_cluster <- plot_data_modules %>% 
+  group_by(pathway, key_group, cluster_label_sub, cluster_label_super) %>% 
+  summarise(mean_score = mean(value, na.rm = T)) %>% 
+  ungroup %>% 
+  mutate(cluster_number = as.numeric(cluster_label_sub))
+
+```
+
+```{r chunk_66, fig.width=12, fig.height=6.5}
+
+common_heat_layers <- list(
+  scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
+                       na.value = "grey10", 
+                       # breaks = c(-cut_value, 0, cut_value), 
+                       # labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
+                       # limits = c(-cut_value, cut_value)
+                       ),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.title = element_blank(),
+        plot.margin = margin(0, 0, 0, 0),
+        strip.text = element_blank())
+)
+
+pw_plot1 <- plot_data_modules_summary_cluster %>% 
+  filter(key_group == "pathway") %>% 
+  ggplot() +
+  geom_tile(aes(cluster_label_sub, pathway, fill = mean_score)) +
+  common_heat_layers +
+  facet_grid(~cluster_label_super, scales = "free", space = "free") + 
+  labs(x = "Cluster", y = "Pathway", fill = "Mean\nPROGENy\nscore") +
+  scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
+                       # labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
+                       # breaks = c(-cut_value, 0, cut_value), 
+                       na.value = "grey10") +
+  theme(axis.text.x = element_blank())
+
+pw_plot2 <- plot_data_modules_summary_cluster %>% 
+  filter(key_group == "module") %>% 
+  ggplot() +
+  geom_tile(aes(cluster_label_sub, pathway, fill = mean_score)) +
+  common_heat_layers +
+  facet_grid(~cluster_label_super, scales = "free", space = "free") + 
+  labs(x = "Cluster", y = "Module", fill = "\n\n\nMean\nmodule\nscore") +
+  scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
+                       # labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
+                       # breaks = c(-cut_value, 0, cut_value), 
+                       na.value = "grey10") +
+  theme(axis.text.x = element_blank())
+
+pw_plot1_anno <- plot_data_modules_summary_cluster %>% 
+  distinct(cluster_label_sub, cluster_number, cluster_label_super) %>% 
+  mutate(facet_helper = "") %>% 
+  ggplot() +
+  geom_tile(aes(cluster_label_sub, facet_helper, fill = cluster_label_sub)) +
+  geom_point(aes(cluster_label_sub, facet_helper), color = "white", size = 6, alpha = 0.5) +
+  geom_text(aes(cluster_label_sub, facet_helper, label = cluster_number)) +
+  common_heat_layers + 
+  scale_fill_manual(values = clrs$cluster_label_sub[[coi]]) +
+  facet_grid(~cluster_label_super, scales = "free", space = "free") +
+  theme(axis.text.y = element_blank(),
+        strip.text = element_blank()) +
+  guides(fill = F)
+
+heat_module_grid <- plot_grid(pw_plot1, pw_plot2, pw_plot1_anno, rel_heights = c(0.45, 0.15, 0.4), ncol = 1, align = "v", axis = "lrtb")
+
+heat_module_grid
+
+ggsave("_fig/004_T_cell/004_module_heatmap.pdf", heat_module_grid, width = 12, height = 6.5)
+
+```
+
 ## marker heatmap 
 
 ```{r chunk_70, fig.width=15, fig.height=5}
 
-plot_data_markers <- as_tibble(FetchData(seu_obj_sub, c("cluster_label_sub", myfeatures, unique(marker_tbl_top$gene)))) %>% 
+plot_data_markers <- as_tibble(FetchData(seu_obj_sub, c(myfeatures, unique(marker_tbl_top$gene)))) %>% 
   gather(gene, value, -c(1:(length(myfeatures)+1))) %>% 
   left_join(meta_tbl, by = "sample") %>% 
   mutate(cluster_label_sub = ordered(cluster_label_sub, levels = my_subtypes)) %>% 
@@ -212,11 +330,12 @@ ha_row <- rowAnnotation(
 )
 
 ha_col <- columnAnnotation(
-  `Cell type` = colnames(plot_data_markers_mat)[-c(1:3)],
-  col = list(`Cell type` = clrs$cluster_label_sub[[coi]]),
+  `Cell type` = anno_block(gp = gpar(fill = clrs$cluster_label_sub[[coi]], col = NA),
+                           labels = as.character(1:(ncol(plot_data_markers_mat)-3)),
+                           labels_rot = 90),
   show_legend = F,
   annotation_name_side = "left",
-  annotation_name_rot = 180
+  annotation_name_rot = 0
 )
 
 gene_idx <- plot_data_markers_mat$highlight == TRUE
@@ -259,30 +378,41 @@ marker_heatmap <- Heatmap(
 
 ### per site
 
-```{r chunk_080, fig.width=3, fig.height=6}
+```{r chunk_080, fig.width=3, fig.height=9}
 
 source("_src/comp_plot.R")
 
 comp_tbl_sample_sort <- plot_data_sub %>%
-  filter(therapy == "pre-Rx") %>%
-  group_by(sample, tumor_subsite, tumor_supersite, patient_id,
+  filter(therapy == "pre-Rx", consensus_signature != "Undetermined") %>%
+  group_by(sample, tumor_subsite, tumor_supersite, tumor_megasite, patient_id_short,
            therapy, sort_short_x, consensus_signature, cluster_label_sub) %>%
   tally %>%
-  group_by(sample, tumor_subsite, tumor_supersite, patient_id,
+  group_by(sample, tumor_subsite, tumor_supersite, tumor_megasite, patient_id_short,
            therapy, sort_short_x, consensus_signature) %>%
   mutate(nrel = n/sum(n)*100,
          log10n = log10(n)) %>%
   mutate(sample_id = sample) %>%
-  mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite))))
+  mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite)))) %>% 
+  ungroup %>% 
+  mutate(cell_type_naive = ifelse(str_detect(cluster_label_sub, "mem"), "T memory", "other")) %>% 
+  mutate(cell_type_dysfunc = ifelse(str_detect(cluster_label_sub, "dysfunc"), "T dysfunctional", "other"))
 
-plist <- default_comp_grid_list(
-  comp_tbl_sample_sort, cluster_label_sub, "CD4.T.naive.centr.mem",
-  cluster_label_sub, super_type_sub = "T.super", vec_plot = F)
+plist1 <- default_comp_grid_list(
+  comp_tbl_sample_sort, cell_type_naive, "T memory",
+  cluster_label_sub, super_type_sub = "T.super", vec_plot = T, nmax = 5000)
 
-comp_grid <- plot_grid(plotlist = plist, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.25, 0.35))
+plist2 <- default_comp_grid_list(
+  comp_tbl_sample_sort, cell_type_dysfunc, "T dysfunctional",
+  cluster_label_sub, super_type_sub = "T.super", vec_plot = T, nmax = 5000)
 
-comp_grid
-ggsave("_fig/004_T_cell/004_T.cell_comp.pdf", comp_grid, width = 3, height = 6)
+comp_grid1 <- plot_grid(plotlist = plist1, ncol = 1, align = "v", rel_heights = c(0.1, 0.1, 0.15, 0.2, 0.45))
+
+comp_grid2 <- plot_grid(plotlist = plist2, ncol = 1, align = "v", rel_heights = c(0.1, 0.1, 0.15, 0.2, 0.45))
+
+comp_grid1
+comp_grid2
+ggsave("_fig/004_T_cell/004_T.cell_comp_memory.pdf", comp_grid1, width = 3, height = 9)
+ggsave("_fig/004_T_cell/004_T.cell_comp_dysfunc.pdf", comp_grid2, width = 3, height = 9)
 
 ```
 

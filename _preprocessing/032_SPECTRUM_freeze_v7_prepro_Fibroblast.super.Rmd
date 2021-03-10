@@ -95,6 +95,21 @@ markers_v7_super[[coi]] %>%
 
 ```{r chunk_032}
 
+## define patient specific clusters
+patient_specific_clusters <- plot_data %>% 
+  group_by(patient_id_short, cluster) %>% 
+  tally %>% 
+  group_by(cluster) %>% 
+  mutate(nrel = n / sum(n),
+         ntotal = sum(n)) %>% 
+  arrange(desc(nrel)) %>% 
+  distinct(cluster, .keep_all = T) %>% 
+  filter(nrel > 0.5) %>% 
+  ungroup %>% 
+  mutate(cluster_label_ps = make.names(paste0("OV.", patient_id_short, ".specific"), unique = T),
+         cluster = as.numeric(cluster)) %>% 
+  distinct(cluster, cluster_label_ps)
+
 # marker_tbl <- read_tsv(paste0("/work/shah/isabl_data_lake/analyses/16/52/1652/celltypes/", coi, "_markers.tsv")) %>% 
 #   filter(resolution == louvain_resolution)
 marker_tbl <- read_tsv(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/outs_pre/", coi, "_markers_", louvain_resolution, ".tsv"))
@@ -159,7 +174,10 @@ cluster_label_tbl <- hyper_tbl %>%
   mutate(subtype = ifelse(sig, as.character(subtype), paste0("unknown_", cluster))) %>% 
   select(cluster, cluster_label = subtype) %>% 
   ungroup %>% 
-  mutate(cluster_label = make.unique(cluster_label, sep = "_"))
+  mutate(cluster_label = make.unique(cluster_label, sep = "_")) %>% 
+  left_join(patient_specific_clusters, by = "cluster") %>% 
+  mutate(cluster_label = ifelse(is.na(cluster_label_ps), cluster_label, cluster_label_ps)) %>% 
+  select(-cluster_label_ps)
 
 seu_obj$cluster_label <- unname(deframe(cluster_label_tbl)[as.character(unlist(seu_obj[[paste0("RNA_snn_res.", louvain_resolution)]]))])
 plot_data$cluster_label <- seu_obj$cluster_label
@@ -204,7 +222,7 @@ formattable::formattable(marker_sheet)
 
 ## sizes
 
-```{r chunk_40, fig.width=5, fig.height=3}
+```{r chunk_40, fig.width=5, fig.height=5}
 
 enframe(sort(table(seu_obj$cluster_label))) %>% 
   mutate(name = ordered(name, levels = rev(name))) %>% 
