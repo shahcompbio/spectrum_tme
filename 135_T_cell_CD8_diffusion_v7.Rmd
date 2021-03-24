@@ -72,7 +72,8 @@ seu_obj_cc <- read_rds("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Ovarian.cance
 
 module_names <- grep("pathway|CD8", colnames(seu_obj_cd8_sub@meta.data), value = T)
 
-gois <- c("TCF7", "GZMK", "ISG15", "CXCL13", "TOX", "PDCD1")
+gois <- c("TCF7", "LEF1", "GZMK", "ISG15", "CXCL13", "TOX", "PDCD1")
+gois_sub <- c("LEF1", "GZMK", "ISG15", "CXCL13")
 
 module_names_sub <- c("CD8.Naive.module", "CD8.Cytotoxic.module", "CD8.Predysfunctional.module", "CD8.Dysfunctional.module", "JAK.STAT.pathway")
 
@@ -188,9 +189,12 @@ dc_plot_genes <- ggplot() +
   # ggrastr::geom_point_rast(aes(DC_1, DC_2, color = value), size = 0.1, alpha = 1,
   #                          raster.dpi = 75,
   #                          data = filter(plot_data, key %in% gois, value > 0)) +
+  ggrastr::geom_point_rast(aes(DC_1, DC_2), color = "grey80", size = 0.1, alpha = 1,
+                           raster.dpi = 75,
+                           data = filter(plot_data, key %in% gois_sub, value == 0)) +
   ggrastr::geom_point_rast(aes(DC_1, DC_2, color = value), size = 0.1, alpha = 1,
                            raster.dpi = 75,
-                           data = filter(plot_data, key %in% gois)) +
+                           data = filter(plot_data, key %in% gois_sub, value > 0)) +
   facet_wrap(~key) + 
   theme(axis.text = element_blank(),
         axis.title = element_blank(),
@@ -267,10 +271,10 @@ module_curves_gois <- plot_data_smooth %>%
   # geom_line(aes(DPT1_bin, se_upper, color = key), size = 0.5, linetype = 2) +
   # geom_line(aes(DPT1_bin, se_lower, color = key), size = 0.5, linetype = 2) +
   labs(x = "Pseudotime", y = "Scaled gene expression", color = "Gene") +
-  scale_color_manual(values = magma(7)[-7]) +
+  scale_color_manual(values = magma(length(gois)+1)[-(length(gois)+1)]) +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
         legend.position = "bottom") +
-  guides(color = guide_legend(override.aes = list(fill = NA), ncol = 2)) +
+  guides(color = guide_legend(override.aes = list(fill = NA), ncol = 3)) +
   scale_y_continuous(breaks = c(0, 1))
 
 module_curves_gois

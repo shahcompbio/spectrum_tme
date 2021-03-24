@@ -347,6 +347,43 @@ read_comp_wrapper <- function(x, cluster_column) {
 comp_list <- lapply(cois[-1], read_comp_wrapper, cluster_label) %>% setNames(cois[-1])
 comp_list$T.super <- read_comp_wrapper("T.super", cluster_label_sub)
 
+
+# foo <- comp_list$T.super %>% 
+#   mutate(sample_id = paste(tumor_subsite, patient_id_short, therapy, sort_short_x)) %>%
+#   mutate(Treg = str_detect(cluster_label_sub, "CD4.T.reg")) %>% 
+#   select(sample, sample_id, cluster_label_sub, n, nrel, nsum, Treg) %>% 
+#   group_by(Treg, sample, sample_id) %>% 
+#   mutate(n_Treg = ifelse(Treg, sum(n), NA), nrel_Treg_T = ifelse(Treg, sum(nrel), NA)) %>% 
+#   na.omit %>% 
+#   arrange(desc(nrel_Treg_T)) %>% 
+#   mutate(nrel = signif(nrel, 2), nrel_Treg_T = signif(nrel_Treg_T, 2)) %>% 
+#   ungroup %>% 
+#   distinct(sample, sample_id, n_Treg, nrel_Treg_T) %>% 
+#   left_join(comp_tbl_sample %>% select(n_cd45p = n, sample_id), by = "sample_id") %>% 
+#   group_by(sample, sample_id, n_Treg, nrel_Treg_T) %>% 
+#   summarise(n_cd45p = sum(n_cd45p)) %>% 
+#   mutate(nrel_Treg_cd45p = signif(n_Treg/n_cd45p*100, 2)) %>% 
+#   ungroup %>% 
+#   arrange(-nrel_Treg_cd45p) %>% 
+#   select(-sample_id) %>% 
+#   mutate(sample_mpif = str_remove_all(sample, "_CD45P_")) %>% 
+#   left_join(select(mpif_meta_tbl, sample_mpif = sample_id, has_mpif = batch), by = "sample_mpif") %>% 
+#   mutate(has_mpif = ifelse(is.na(has_mpif), F, T)) %>% 
+#   select(-sample_mpif)
+# 
+# ggplot(foo, aes(nrel_Treg_T, nrel_Treg_cd45p, color = has_mpif)) +
+#   geom_point() +
+#   theme(aspect.ratio = 1)
+# 
+# write_tsv(foo, "treg_fractions.tsv")
+# 
+# mpif_meta_tbl$sample_id
+# 
+# foo %>% 
+#   filter(has_mpif == T) %>% 
+#   filter(str_detect(sample, "ADNEXA|OVARY|OMENTUM")) %>% 
+#   write_tsv("treg_fractions_sub.tsv")
+
 ```
 
 ### T/NK cells {.tabset}
@@ -465,17 +502,17 @@ source("_src/global_vars.R")
 names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "\\.", " ")
 names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 
-# mpif_pixel <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v8/integrate/outputs/cohort_merge/patient/SPECTRUM/all/detection.tsv") %>%
+# mpif_pixel <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v9/integrate/outputs/cohort_merge/patient/SPECTRUM/all/detection.tsv") %>%
 #   select(cell_id, compartment = Parent)
-#
-# mpif_cell_type <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v8/integrate/outputs/cohort_merge/patient/SPECTRUM/all/cell_type_manual.tsv") %>%
+# 
+# mpif_cell_type <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v9/integrate/outputs/cohort_merge/patient/SPECTRUM/all/cell_type_manual.tsv") %>%
 #   left_join(mpif_pixel, by = "cell_id") %>%
 #   mutate(cell_id = str_remove_all(cell_id, "CD68.TOX.PD1.PDL1.CD8.panCK_CK8-18.DAPI_|_component_data - resolution #1")) %>%
 #   separate(cell_id, into = c("patient_id", "tumor_subsite", "fov_id", "cell_idx"),
 #            sep = "_", remove = F) %>%
 #   mutate(fov_id = paste0(patient_id, "_", tumor_subsite, "_", fov_id),
 #          slide_id = paste0(patient_id, "_", tumor_subsite))
-#
+# 
 # ## expand for double and triple positive cells (cell type markers)
 # mpif_ncell <- mpif_cell_type %>%
 #   # sample_n(10000) %>%
@@ -486,7 +523,7 @@ names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 #   mutate(n_cells = sum(CD68_state_log, CD8_state_log, panCK_state_log)) %>%
 #   select(cell_id, n_cells) %>%
 #   deframe
-#
+# 
 # mpif_cell_type_expanded <- bind_rows(
 #   filter(mpif_cell_type, cell_id %in% names(mpif_ncell[mpif_ncell == 0]),
 #          TOX_state == "TOX+" | PD1_state == "PD1+" | PDL1_state == "PDL1+") %>%
@@ -533,7 +570,7 @@ names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 #     mutate(cell_id = paste0(cell_id, "_3"),
 #            cell_type = c("panCK+"))
 # )
-#
+# 
 # mpif_cell_state_expanded <- mpif_cell_type_expanded %>%
 #   mutate(cell_state = case_when(
 #     cell_type == "CD8+" ~ paste0(CD8_state, TOX_state, PD1_state),
@@ -542,10 +579,10 @@ names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 #     cell_type == "Unknown" ~ "Unknown",
 #     cell_type == "Other" ~ "Other"
 #   ))
-#
-# write_tsv(mpif_cell_state_expanded, "/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded.tsv")
+# 
+# write_tsv(mpif_cell_state_expanded, "/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded_v9.tsv")
 
-mpif_cell_state_expanded <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded.tsv") %>%
+mpif_cell_state_expanded <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded_v9.tsv") %>%
   select(cell_id, slide_id, fov_id, compartment, cell_type, cell_state, contains("state")) %>%
   left_join(select(mpif_meta_tbl, slide_id, patient_id_short, tumor_supersite, tumor_subsite, therapy, sample_id, consensus_signature, tumor_megasite), by = "slide_id") %>%
   na.omit() %>% 
@@ -1166,6 +1203,9 @@ cor_plot_grid <- plot_grid(plotlist = cor_plot_list, ncol = 1, align = "hv")
 ```
 
 ```{r chunk_270, fig.width=12, fig.height=10}
+
+distinct(comp_tbl_sample, sample_id, sort_short_x) %>% group_by(sort_short_x) %>% tally
+distinct(mpif_cell_type, slide_id) %>% tally
 
 comp_grid_full <- ggdraw() +
   draw_plot(gcomp1, x = 0, y = 0, width = 1, height = 1) +

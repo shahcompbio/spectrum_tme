@@ -119,9 +119,9 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 [`130_T_cell_plotting_umap_comp_heatmap_v7.html`](130_T_cell_plotting_umap_comp_heatmap_v7.html)
 
-- [ ] UMAP embeddings
-- [ ] Marker heatmap
-- [ ] Composition barplots
+- [x] UMAP embeddings
+- [x] Marker heatmap
+- [x] Composition barplots
 
 [`135_T_cell_CD8_diffusion_v7.html`](135_T_cell_CD8_diffusion_v7.html)
 
@@ -134,9 +134,9 @@ The output from Nick Ceglia's scRNA-seq pipeline serves as an input to the analy
 
 [`140_Myeloid_cell_plotting_umap_comp_heatmap_v7.html`](140_Myeloid_cell_plotting_umap_comp_heatmap_v7.html)
 
-- [ ] UMAP embeddings
-- [ ] Marker heatmap
-- [ ] Composition barplots
+- [x] UMAP embeddings
+- [x] Marker heatmap
+- [x] Composition barplots
 
 [`145_Macrophage_diffusion_v7.html`](145_Macrophage_diffusion_v7.html)
 

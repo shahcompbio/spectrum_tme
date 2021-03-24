@@ -348,12 +348,12 @@ plist6 <- default_comp_grid_list(
 
 plist7 <- default_comp_grid_list(
   comp_tbl_sample_sort, cell_type_super_ml, "Dendritic cell",
-  cluster_label, super_type = "Myeloid.super", nmax = 5000)
+  cluster_label, super_type = "Myeloid.super", nmax = 5000, highlight = T)
 
 plist8 <- default_comp_grid_list(
   filter(comp_tbl_sample_sort, tumor_supersite != "Ascites"), 
   cell_type_super_ml, "Dendritic cell",
-  cluster_label, super_type = "Myeloid.super", nmax = 5000)
+  cluster_label, super_type = "Myeloid.super", nmax = 5000, highlight = T)
 
 comp_grid1 <- plot_grid(plotlist = plist1, ncol = 1, align = "v", rel_heights = c(0.2, 0.2, 0.21, 0.39))
 

@@ -16,7 +16,8 @@ rank_by <- function(comp_tbl, rank_column = cell_type, rank_value = "T cell", fi
     ungroup %>% 
     arrange(!!rank_column != rank_value, desc(nrel_total)) %>% 
     mutate(!!fill_column := ordered(!!fill_column, levels = rev(unique(!!fill_column)))) %>% 
-    mutate(sample_id_lvl = ordered(sample_id, levels = rev(unique(sample_id))))
+    mutate(sample_id_lvl = ordered(sample_id, levels = rev(unique(sample_id))),
+           alpha_highlight = ifelse(!!rank_column == rank_value, T, F))
   comp_rank <- comp_lvl %>% 
     distinct(!!rank_column, sample_id_lvl, .keep_all = T) %>% 
     group_by(!!rank_column) %>% 
@@ -80,16 +81,17 @@ wilcoxon_test <- function(comp_tbl_rank, rank_column, rank_value, test_var, pcut
 }
 
 ## composition bar plots
-plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, super_type = NULL, super_type_sub = NULL) {
+plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, super_type = NULL, super_type_sub = NULL, highlight = F) {
   x <- enquo(x)
   y <- enquo(y)
   fill <- enquo(fill)
   facet <- enquo(facet)
   if (as_label(y) == "nrel") ylab <- paste0("% cells")
   if (as_label(y) == "n") ylab <- paste0("# cells")
-  p <- ggplot(comp_tbl_rank, aes(!!x, !!y, fill = !!fill)) +
+  p <- ggplot(comp_tbl_rank, aes(!!x, !!y, fill = !!fill, alpha = alpha_highlight), color = NULL) +
     geom_bar(stat = "identity", position = position_stack(), width = 1) +
     coord_cartesian(clip = "off", expand = F) + 
+    scale_alpha_manual(values = c(1, 1)) + 
     theme(axis.title.y = element_text(margin = margin(0, -1, 0, 1, unit = "npc")),
           strip.text.y = element_blank(),
           strip.background.y = element_blank(),
@@ -116,6 +118,8 @@ plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, su
     theme(panel.grid.major.y = element_line(linetype = 1, color = "grey90", size = 0.5),
           plot.title = element_text(face = "plain", size = 14,
                                     hjust = 0.5, vjust = 0.5))
+  if (highlight) p <- p +
+    scale_alpha_manual(values = c(0.2, 1))
   return(p)
   
 }
@@ -123,6 +127,10 @@ plot_comp_bar <- function(comp_tbl_rank, x, y, fill, nmax = 10000, facet = F, su
 # plot_comp_bar(rank_by(filter(comp_tbl_sample, sort_short_x == "CD45+"),
 #                       cell_type, "T cell", cell_type),
 #               sample_id_lvl, n, cell_type, facet = sort_short_x)
+# plot_comp_bar(rank_by(filter(comp_tbl_sample_sort, sort_short_x == "CD45+"),
+#                       cell_type_naive, "T naive/mem", cluster_label_sub,
+#                       super_type_sub = "T.super"),
+#               sample_id_lvl, nrel, cluster_label_sub, facet = sort_short_x, super_type_sub = "T.super", highlight = T) + NoLegend()
 
 ## composition box rank plots
 plot_comp_box <- function(comp_tbl_rank, x, y, color, rank_column, rank_value, pcut = 0.01, facet = F, tiles_only = F) {
@@ -254,7 +262,7 @@ default_comp_grid_list <- function(
   n_bar = T, nrel_bar = T, mutsig_box = T, site_box = T, vec_plot = T,
   site_tiles = F, mutsig_tiles = F, 
   super_type = NULL, super_type_sub = NULL, nmax = 10000, 
-  facet = sort_short_x, yaxis = T) {
+  facet = sort_short_x, yaxis = T, highlight = F) {
   rank_column <- enquo(rank_column)
   fill_column <- enquo(fill_column)
   facet <- enquo(facet)
@@ -276,7 +284,7 @@ default_comp_grid_list <- function(
     plist$pbar2 <- plot_comp_bar(comp_tbl_rank, sample_id_lvl, nrel, 
                                  !!fill_column, facet = !!facet, 
                                  super_type = super_type,
-                                 super_type_sub = super_type_sub) +
+                                 super_type_sub = super_type_sub, highlight = highlight) +
       remove_guides
   }
   if (mutsig_box) {

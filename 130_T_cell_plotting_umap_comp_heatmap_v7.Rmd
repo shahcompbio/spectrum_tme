@@ -184,7 +184,7 @@ umap_site_legend <- cowplot::get_legend(umap_site)
 
 ## module heatmap
 
-```{r chunk_65, fig.width=15, fig.height=5}
+```{r chunk_61, fig.width=15, fig.height=5}
 
 module_names <- grep("pathway|CD8", colnames(seu_obj_sub@meta.data), value = T)
 
@@ -222,7 +222,7 @@ plot_data_modules_summary_cluster <- plot_data_modules %>%
 
 ```
 
-```{r chunk_66, fig.width=12, fig.height=6.5}
+```{r chunk_62, fig.width=12, fig.height=4.5}
 
 common_heat_layers <- list(
   scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
@@ -240,12 +240,12 @@ common_heat_layers <- list(
 )
 
 pw_plot1 <- plot_data_modules_summary_cluster %>% 
-  filter(key_group == "pathway") %>% 
+  filter(key_group == "pathway", pathway %in% c("JAK.STAT", "TNFa", "TGFb")) %>% 
   ggplot() +
   geom_tile(aes(cluster_label_sub, pathway, fill = mean_score)) +
   common_heat_layers +
   facet_grid(~cluster_label_super, scales = "free", space = "free") + 
-  labs(x = "Cluster", y = "Pathway", fill = "Mean\nPROGENy\nscore") +
+  labs(x = "Cluster", y = "Pathway", fill = "\n\n\nMean\nPROGENy\nscore") +
   scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
                        # labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
                        # breaks = c(-cut_value, 0, cut_value), 
@@ -254,11 +254,12 @@ pw_plot1 <- plot_data_modules_summary_cluster %>%
 
 pw_plot2 <- plot_data_modules_summary_cluster %>% 
   filter(key_group == "module") %>% 
+  mutate(pathway = str_remove_all(pathway, "CD8.")) %>% 
   ggplot() +
   geom_tile(aes(cluster_label_sub, pathway, fill = mean_score)) +
   common_heat_layers +
   facet_grid(~cluster_label_super, scales = "free", space = "free") + 
-  labs(x = "Cluster", y = "Module", fill = "\n\n\nMean\nmodule\nscore") +
+  labs(x = "Cluster", y = "Module", fill = "\n\n\n\n\n\n\n\n\n\n\n\n\n\nMean\nmodule\nscore") +
   scale_fill_gradient2(low = scales::muted("blue"), high = scales::muted("red"), 
                        # labels = c(paste0("≤-", cut_value), "0", paste0("≥", cut_value)),
                        # breaks = c(-cut_value, 0, cut_value), 
@@ -279,11 +280,12 @@ pw_plot1_anno <- plot_data_modules_summary_cluster %>%
         strip.text = element_blank()) +
   guides(fill = F)
 
-heat_module_grid <- plot_grid(pw_plot1, pw_plot2, pw_plot1_anno, rel_heights = c(0.45, 0.15, 0.4), ncol = 1, align = "v", axis = "lrtb")
+# heat_module_grid <- plot_grid(pw_plot1, pw_plot2, pw_plot1_anno, rel_heights = c(0.45, 0.15, 0.4), ncol = 1, align = "v", axis = "lrtb")
+heat_module_grid <- plot_grid(pw_plot1, pw_plot2, pw_plot1_anno, rel_heights = c(0.2, 0.24, 0.56), ncol = 1, align = "v", axis = "lrtb")
 
 heat_module_grid
 
-ggsave("_fig/004_T_cell/004_module_heatmap.pdf", heat_module_grid, width = 12, height = 6.5)
+ggsave("_fig/004_T_cell/004_module_heatmap.pdf", heat_module_grid, width = 12, height = 4.5)
 
 ```
 
@@ -394,16 +396,16 @@ comp_tbl_sample_sort <- plot_data_sub %>%
   mutate(sample_id = sample) %>%
   mutate(tumor_supersite = ordered(tumor_supersite, levels = rev(names(clrs$tumor_supersite)))) %>% 
   ungroup %>% 
-  mutate(cell_type_naive = ifelse(str_detect(cluster_label_sub, "mem"), "T memory", "other")) %>% 
+  mutate(cell_type_naive = ifelse(str_detect(cluster_label_sub, "mem"), "T naive/mem", "other")) %>% 
   mutate(cell_type_dysfunc = ifelse(str_detect(cluster_label_sub, "dysfunc"), "T dysfunctional", "other"))
 
 plist1 <- default_comp_grid_list(
-  comp_tbl_sample_sort, cell_type_naive, "T memory",
-  cluster_label_sub, super_type_sub = "T.super", vec_plot = T, nmax = 5000)
+  comp_tbl_sample_sort, cell_type_naive, "T naive/mem",
+  cluster_label_sub, super_type_sub = "T.super", vec_plot = T, nmax = 5000, highlight = T)
 
 plist2 <- default_comp_grid_list(
   comp_tbl_sample_sort, cell_type_dysfunc, "T dysfunctional",
-  cluster_label_sub, super_type_sub = "T.super", vec_plot = T, nmax = 5000)
+  cluster_label_sub, super_type_sub = "T.super", vec_plot = T, nmax = 5000, highlight = T)
 
 comp_grid1 <- plot_grid(plotlist = plist1, ncol = 1, align = "v", rel_heights = c(0.1, 0.1, 0.15, 0.2, 0.45))
 

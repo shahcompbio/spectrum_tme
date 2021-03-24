@@ -19,7 +19,7 @@ remove_yaxis <- theme(axis.title.y = element_blank(),
                       axis.ticks.y = element_blank(),
                       axis.line.y = element_blank())
 
-remove_guides <- guides(color = F, fill = F, shape = F, alpha = F)
+remove_guides <- guides(color = F, fill = F, shape = F, alpha = F, size = F)
 
 
 ## umap helpers --------------------------------------
@@ -90,7 +90,7 @@ meta_tbl <- left_join(meta_tbl, signature_tbl, by = "patient_id")
 
 ## load mpif meta data -------------------------------
 
-mpif_meta_tbl <- read_excel("/home/uhlitzf/spectrum_tme/_data/small/MSK SPECTRUM - mpIF.xlsx", sheet = 3) %>%
+mpif_meta_tbl <- read_excel("/home/uhlitzf/spectrum_tme/_data/small/MSK SPECTRUM - mpIF_v9.xlsx", sheet = 3) %>%
   mutate(slide_id = str_replace_all(pici_id, " ", "_"),
          sample_id = paste0(patient_id, "_", surgery, str_replace_all(toupper(tumor_subsite), " ", "_"))) %>%
   mutate(patient_id_short = str_remove_all(patient_id, "SPECTRUM-OV-"),

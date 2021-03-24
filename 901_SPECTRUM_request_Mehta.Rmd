@@ -113,7 +113,12 @@ cat(gois, sep = ", ")
 plot_data_comp <- plot_data %>% 
   mutate(expressed = value > 0) %>% 
   group_by(patient_id_short, cell_type_super, gene) %>% 
-  summarise(pct.expressed = sum(expressed)/length(expressed))
+  mutate(pct.expressed = sum(expressed)/length(expressed),
+         n_cells = length(patient_id_short)) %>% 
+  distinct(pct.expressed, n_cells) %>% 
+  ungroup() %>% 
+  select(patient_id_short, cell_type_super, gene, pct.expressed, n_cells) %>% 
+  arrange(patient_id_short, cell_type_super, gene)
 
 write_tsv(plot_data_comp, "mehta_marker_expression_pct.tsv")
 

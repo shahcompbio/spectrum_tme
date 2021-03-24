@@ -324,39 +324,63 @@ write_tsv(select(plot_data_sub, cell_id, everything(), -umapharmony_1, -umapharm
 
 ```{r chunk_070, fig.width=15, fig.height=5}
 
-signature_modules <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", sheet = 2, skip = 1, range = "M2:P100") %>%
-  gather(module, gene) %>%
-  na.omit() %>%
-  group_by(module) %>%
-  do(gene = c(.$gene)) %>%
-  {setNames(.$gene, .$module)}
+signature_modules_cd8 <- read_excel("_data/small/signatures/SPECTRUM v5 sub cluster markers.xlsx", sheet = 2, skip = 1, range = "M2:P100") %>% 
+  gather(module, gene) %>% 
+  na.omit() %>% 
+  group_by(module) %>% 
+  do(gene = c(.$gene)) %>% 
+  {setNames(.$gene, .$module)} %>% 
+  setNames(paste0(names(.), ".module"))
 
-signature_modules$ISG.module <- c("CCL5", "CXCL10", "IFNA1", "IFNB1", "ISG15", "IFI27L2", "SAMD9L")
+signature_modules_cin <- yaml::read_yaml("_data/small/signatures/cgas_sting.yaml") %>% 
+  .[lapply(., length) > 1] %>% 
+  setNames(paste0(names(.), ".module"))
 
-## compute expression module scores
-for (i in 1:length(signature_modules)) {
-  seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules[i], name = names(signature_modules)[i])
-  seu_obj_sub[[names(signature_modules)[i]]] <- seu_obj_sub[[paste0(names(signature_modules)[i], "1")]]
-  seu_obj_sub[[paste0(names(signature_modules)[i], "1")]] <- NULL
-  print(paste(names(signature_modules)[i], "DONE"))
-}
+broad_pws <- read_lines("_data/small/signatures/h.all.v7.2.symbols.gmt") %>% 
+  lapply(str_split, "\\t") %>% 
+  unlist(recursive = F) %>% 
+  lapply(function(x) setNames(list(x[-c(1:2)]), x[1])) %>% 
+  unlist(recursive = F)
 
-## compute progeny scores
-progeny_list <- seu_obj_sub@assays$RNA@data[VariableFeatures(seu_obj_sub),] %>%
-  as.matrix %>%
-  progeny %>%
-  as.data.frame %>%
-  as.list
-
-names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
-
-for (i in 1:length(progeny_list)) {
-  seu_obj_sub <- AddMetaData(seu_obj_sub, metadata = progeny_list[[i]],
-                             col.name = names(progeny_list)[i])
-}
-
-write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
+# ## compute expression module scores
+# for (i in 1:length(signature_modules_cd8)) {
+#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules_cd8[i], name = names(signature_modules_cd8)[i])
+#   seu_obj_sub[[names(signature_modules_cd8)[i]]] <- seu_obj_sub[[paste0(names(signature_modules_cd8)[i], "1")]]
+#   seu_obj_sub[[paste0(names(signature_modules_cd8)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cd8)[i], "DONE"))
+# }
+# 
+# for (i in 1:length(signature_modules_cin)) {
+#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = signature_modules_cin[i], name = names(signature_modules_cin)[i])
+#   seu_obj_sub[[names(signature_modules_cin)[i]]] <- seu_obj_sub[[paste0(names(signature_modules_cin)[i], "1")]]
+#   seu_obj_sub[[paste0(names(signature_modules_cin)[i], "1")]] <- NULL
+#   print(paste(names(signature_modules_cin)[i], "DONE"))
+# }
+# 
+# for (i in 1:length(broad_pws)) {
+#   seu_obj_sub <- AddModuleScore(seu_obj_sub, features = broad_pws[i], name = names(broad_pws)[i])
+#   seu_obj_sub[[names(broad_pws)[i]]] <- seu_obj_sub[[paste0(names(broad_pws)[i], "1")]]
+#   seu_obj_sub[[paste0(names(broad_pws)[i], "1")]] <- NULL
+#   print(paste(names(broad_pws)[i], "DONE"))
+# }
+# 
+# ## compute progeny scores
+# progeny_list <- seu_obj_sub@assays$RNA@data[VariableFeatures(seu_obj_sub),] %>%
+#   as.matrix %>%
+#   progeny %>%
+#   as.data.frame %>%
+#   as.list
+# 
+# names(progeny_list) <- make.names(paste0(names(progeny_list), ".pathway"))
+# 
+# for (i in 1:length(progeny_list)) {
+#   seu_obj_sub <- AddMetaData(seu_obj_sub, metadata = progeny_list[[i]],
+#                              col.name = names(progeny_list)[i])
+# }
+# 
+# write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
 seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
+
 
 ```
 

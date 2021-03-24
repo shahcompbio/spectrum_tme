@@ -9,6 +9,11 @@ consensus_signature:
   Undetermined: "#7f7f7f"
   NA: "#cccccc"
   None: "#7f7f7f"
+brca_group:
+  BRCA1: "#5890c0"
+  BRCA2: "#62a766"
+  WT: "#7f7f7f"
+  double mut: "#000000"
 cell_type:
   T.cell: "#33a02c"
   B.cell: "#1f78b4"

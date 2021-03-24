@@ -1,0 +1,560 @@
+---
+title: "TCGA analysis"
+author: "Florian Uhlitz"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    df_print: kable
+    number_sections: yes
+    toc: yes
+    toc_float: true
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = F)
+
+```
+
+```{r chunk_010}
+
+library(survminer)
+library(survival)
+library(magrittr)
+library(tidyverse)
+library(Seurat)
+library(readxl)
+library(cowplot)
+library(colorblindr)
+library(viridis)
+library(consensusOV)
+library(progeny)
+
+source("_src/global_vars.R")
+
+```
+
+# Idea
+
+1. Observation from SPECTRUM: Endothelial and Fibroblast sub cell types have different compositions across patients, tumor sites and treatment status
+2. TCGA transcriptional sub types reflect cell type composition
+3. Can we use cell type markers defined in SPECTRUM to deconvolute cell type composition in bulk RNA-seq data, and based on this, relate PFS, OS, or treatment response to cell type composition?
+
+# TCGA data overview
+
+```{r chunk_020}
+
+## load data ------------------------------------------------------
+
+file_paths <- list.files("/work/shah/uhlitzf/data/TCGA/OV/htseq", full.names = T)
+
+## sample sheet
+sample_tbl <- tibble(`File Name` = paste0(basename(file_paths), ".gz")) %>% 
+  left_join(read_tsv("/work/shah/uhlitzf/data/TCGA/OV/gdc_sample_sheet.2020-07-28.tsv"), by = "File Name") %>% 
+  set_colnames(str_replace_all(tolower(colnames(.)), " ", "_")) %>% 
+  select(case_id, sample_id, file_name)
+
+sample_df <- sample_tbl %>% 
+  as.data.frame %>% 
+  set_rownames(.$sample_id)
+
+# ## raw counts ---------------------------
+# 
+# read_c2 <- function(x) select(read_tsv(x, col_names = F), -1)
+# count_tbl <- lapply(file_paths, read_c2) %>%
+#   bind_cols() %>%
+#   set_colnames(sample_tbl$sample_id) %>%
+#   mutate(ENSEMBL = read_tsv(file_paths[1], col_names = F)$X1) %>%
+#   select(ENSEMBL, everything())
+# write_tsv(count_tbl, "/work/shah/uhlitzf/data/TCGA/OV/all_counts.tsv")
+# 
+# count_tbl <- read_tsv("/work/shah/uhlitzf/data/TCGA/OV/all_counts.tsv")
+# count_mat <- as.matrix(select(count_tbl, -1)) %>%
+#   set_rownames(count_tbl$ENSEMBL)
+# 
+# ## normalization ------------------------
+# 
+# dds <- DESeq2::DESeqDataSetFromMatrix(countData = count_mat, colData = sample_df, design = ~sample_id)
+# 
+# dds <- DESeq2::estimateSizeFactors(dds)
+# write_rds(dds, "/work/shah/uhlitzf/data/TCGA/OV/deseq_obj.rds")
+dds <- read_rds("/work/shah/uhlitzf/data/TCGA/OV/deseq_obj.rds")
+
+count_norm <- DESeq2::counts(dds, normalized = T)
+
+## annotation ------------------------------
+
+rownames(count_norm) <- str_split(rownames(count_norm), "\\.") %>% 
+  lapply(function(x) x[1]) %>% 
+  unlist
+
+gene_symbol <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db,
+                                         keys = rownames(count_norm),
+                                         columns = c("ENSEMBL", "SYMBOL", "UNIPROT"),
+                                         keytype = "ENSEMBL") %>%
+  distinct(SYMBOL, .keep_all = T) %>% 
+  distinct(ENSEMBL, .keep_all = T) %>% 
+  na.omit() %>% 
+  select(-UNIPROT) %>% 
+  deframe
+
+count_norm_symbol <- count_norm[names(gene_symbol),]
+rownames(count_norm_symbol) <- gene_symbol
+
+## embeddings ----------------------------------
+
+tcga_pca <- prcomp(t(count_norm_symbol))
+set.seed(123)
+tcga_umap <- uwot::umap(tcga_pca$x[,1:50]) %>% 
+  set_colnames(c("UMAP_1", "UMAP_2")) %>% 
+  as_tibble() %>% 
+  mutate(sample_id = rownames(tcga_pca$x))
+
+# ## consensusOV --------------------------------
+
+# gene_entrez <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db,
+#                                          keys = rownames(count_norm),
+#                                          columns = c("ENSEMBL", "ENTREZID"),
+#                                          keytype = "ENSEMBL") %>%
+#   distinct(ENTREZID, .keep_all = T) %>%
+#   distinct(ENSEMBL, .keep_all = T) %>%
+#   deframe
+# 
+# count_norm_entrez <- count_norm[names(gene_entrez),]
+# rownames(count_norm_entrez) <- gene_entrez
+# 
+# covs <- get.subtypes(count_norm_entrez, rownames(count_norm_entrez), method = "consensusOV")
+# covs_tbl <- cbind(as.data.frame(covs[[2]]), covs[[1]]) %>%
+#   as_tibble(rownames = "sample_id") %>%
+#   setNames(c(names(.)[-6], "consensusOV"))
+# 
+# consensusOV_names <- c(IMR_consensus = "Immunoreactive", MES_consensus = "Mesenchymal", PRO_consensus = "Proliferative", DIF_consensus = "Differentiated")
+# covs_tbl <- covs_tbl %>% 
+#   mutate(consensusOV = as.character(consensusOV)) %>% 
+#   mutate(consensusOV = consensusOV_names[consensusOV])
+# write_tsv(covs_tbl, "/work/shah/uhlitzf/data/TCGA/OV/tcga_consensusOV.tsv")
+covs_tbl <- read_tsv("/work/shah/uhlitzf/data/TCGA/OV/tcga_consensusOV.tsv")
+
+# ## progeny --------------------------------
+
+gene_hugo <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db,
+                                         keys = rownames(count_norm),
+                                         columns = c("ENSEMBL", "SYMBOL"),
+                                         keytype = "ENSEMBL") %>%
+  distinct(SYMBOL, .keep_all = T) %>%
+  distinct(ENSEMBL, .keep_all = T) %>%
+  deframe
+
+count_norm_hugo <- count_norm[names(gene_hugo),]
+rownames(count_norm_hugo) <- gene_hugo
+
+## compute progeny scores
+progeny_tbl <- count_norm_hugo %>%
+  progeny %>%
+  as.data.frame %>% 
+  as_tibble() %>% 
+  setNames(paste0(make.names(names(.)), ".pathway")) %>% 
+  mutate(sample_id = colnames(count_norm_hugo)) %>% 
+  select(sample_id, everything())
+
+## clinical data ----------------------------------
+
+clin_tbl <- read_tsv("/work/shah/uhlitzf/data/TCGA/OV/ov_tcga_pan_can_atlas_2018_clinical_data.tsv") %>% 
+  set_colnames(str_replace_all(tolower(colnames(.)), " ", "_")) %>% 
+  select(case_id = patient_id, 
+         age = diagnosis_age,
+         final_pfstm = `progress_free_survival_(months)`,
+         final_pfsid = progression_free_status,
+         final_ostm = `overall_survival_(months)`,
+         final_osid = overall_survival_status) %>% 
+  distinct(case_id, .keep_all = T) %>% 
+  mutate(final_pfsid = as.numeric(str_remove_all(final_pfsid, ":PROGRESSION|:CENSORED")),
+         final_osid = as.numeric(str_remove_all(final_osid, ":DECEASED|:LIVING")))
+
+mut_tbl <- read_tsv("/work/shah/uhlitzf/data/TCGA/OV/TCGA-OV-BRCA-status.tsv") %>% 
+  select(case_id = `Patient ID`, BRCA1, BRCA2) %>% 
+  mutate(brca_group = case_when(
+    BRCA1 == "no alteration" & BRCA2 == "no alteration" ~ "WT",
+    BRCA1 != "no alteration" & BRCA2 != "no alteration" ~ "double mut",
+    BRCA1 != "no alteration" ~ "BRCA1",
+    BRCA2 != "no alteration" ~ "BRCA2"
+  ))
+
+
+## join data for plotting ------------------------
+
+plot_data <- tcga_umap %>% 
+  left_join(select(sample_tbl, -file_name), by = "sample_id") %>% 
+  left_join(select(covs_tbl, sample_id, consensusOV), by = "sample_id") %>% 
+  left_join(clin_tbl, by = "case_id") %>% 
+  left_join(mut_tbl, by = "case_id") %>% 
+  left_join(progeny_tbl, by = "sample_id")
+
+```
+
+## Cohort size
+
+The TCGA OV RNA-seq data set consists of bulk RNA-seq data from a cohort of `r nrow(tcga_umap)` ovarian cancer patients. 
+
+```{r chunk_021, fig.width=5, fig.height=3}
+
+plot_data %>% 
+  group_by(consensusOV) %>% 
+  tally %>% 
+  ggplot() + 
+  geom_bar(aes(consensusOV, n, fill = consensusOV), stat = "identity")+
+  labs(y = "# cases") + 
+  scale_fill_manual(values = clrs$consensusOV)
+
+plot_data %>% 
+  group_by(brca_group) %>% 
+  tally %>% 
+  ggplot() + 
+  geom_bar(aes(brca_group, n, fill = brca_group), stat = "identity")+
+  labs(y = "# cases") +
+  scale_fill_manual(values = clrs$brca_group)
+
+```
+
+## Cohort features
+
+### UMAPs
+
+Top 50 PCs were computed on all genes and used as input for UMAP. One dot represents one TCGA case.
+
+```{r chunk_022, fig.width=8, fig.height=5}
+
+p1 <- ggplot(plot_data) +
+  geom_point(aes(UMAP_1, UMAP_2, color = consensusOV)) +
+  NoAxes() +
+  scale_color_manual(values = clrs$consensusOV)
+
+p2 <- ggplot(plot_data) +
+  geom_point(aes(UMAP_1, UMAP_2, color = age)) +
+  NoAxes() +
+  scale_color_viridis_c()
+
+p3 <- ggplot(plot_data) +
+  geom_point(aes(UMAP_1, UMAP_2, color = as.logical(final_pfsid))) +
+  NoAxes()
+
+p4 <- ggplot(plot_data) +
+  geom_point(aes(UMAP_1, UMAP_2, color = brca_group)) +
+  scale_color_manual(values = clrs$brca_group) +
+  NoAxes()
+
+plot_grid(p1, p2, p3, p4, ncol = 2, align = "hv")
+
+```
+
+### pathway expression
+
+```{r chunk_0221, fig.width=10, fig.height=12}
+
+plot_data %>% 
+  gather(pathway, value, -c(1:13)) %>% 
+  ggplot() +
+  geom_boxplot(aes(brca_group, value, color = brca_group)) +
+  facet_wrap(~pathway, scales = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  scale_color_manual(values = clrs$brca_group)
+
+```
+
+
+## Survival plots
+
+PFS and OS are overall higher for patients of the immunoreactive subtype.
+
+```{r chunk_023, fig.width=5, fig.height=3}
+
+pfsfit <- survfit(Surv(final_pfstm/12, final_pfsid) ~ consensusOV, data = plot_data)
+osfit <- survfit(Surv(final_ostm/12, final_osid) ~ consensusOV, data = plot_data)
+
+ggsurvplot(pfsfit, data = plot_data, 
+           palette = setNames(clrs$consensusOV, 
+                              paste0("consensusOV=", names(clrs$consensusOV)))) +
+  labs(x = "Time [years]",
+       y = "PFS")
+
+ggsurvplot(osfit, data = plot_data,
+           palette = setNames(clrs$consensusOV, 
+                              paste0("consensusOV=", names(clrs$consensusOV)))) +
+  labs(x = "Time [years]",
+       y = "OS")
+
+```
+
+# TCGA gene expression data
+
+The gene expression data can be used to identify potential bio markers for better stratification. 
+
+```{r chunk_030, fig.width=5, fig.height=3}
+
+expression_cutoff <- 2
+
+## Cluster signatures from SPECTRUM
+marker_tbl_fb <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Fibroblast.super_marker_sheet.tsv")
+marker_tbl_ml <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Myeloid.super_marker_sheet.tsv")
+marker_tbl_tc <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/T.super_marker_sheet_full.tsv")
+marker_tbl_cc <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/supplementary_tables/Ovarian.cancer.super_marker_sheet.tsv")
+
+cluster_label_names <- c(unlist(lapply(clrs$cluster_label, names), use.names = F), unlist(lapply(clrs$cluster_label_sub, names), use.names = F))
+
+wrap_markers <- . %>%
+  .[,colnames(.)[colnames(.) %in% cluster_label_names]] %>% 
+  slice(1:10) %>%
+  # select(-rank) %>% 
+  gather(cluster, gene_id)
+
+markers_tbl <- list(T.cell = wrap_markers(marker_tbl_tc),
+                    Fibroblast = wrap_markers(marker_tbl_fb),
+                    Myeloid.cell = wrap_markers(marker_tbl_ml),
+                    Ovarian.cancer.cell = wrap_markers(marker_tbl_cc)) %>% 
+  bind_rows(.id = "cell_type")
+
+gois <- unique(markers_tbl$gene_id)
+gois <- gois[gois %in% rownames(count_norm_symbol)]
+
+## filter TCGA data for SPECTRUM markers
+full_data <- count_norm_symbol[gois,] %>% 
+  as.data.frame %>% 
+  as_tibble(rownames = "gene_id") %>% 
+  gather(sample_id, exprs, -gene_id) %>% 
+  left_join(select(sample_tbl, -file_name), by = "sample_id") %>% 
+  left_join(select(covs_tbl, sample_id, consensusOV), by = "sample_id") %>% 
+  left_join(clin_tbl, by = "case_id") %>% 
+  left_join(mut_tbl, by = "case_id") %>% 
+  left_join(markers_tbl, by = "gene_id") %>% 
+  mutate(log_exprs = log2(exprs+1)) %>% 
+  group_by(gene_id) %>% 
+  mutate(mean_exprs = mean(log_exprs, na.rm = T),
+         sd_exprs = sd(log_exprs, na.rm = T),
+         rel_exprs = (log_exprs-mean_exprs)/sd_exprs,
+         cut_exprs = ifelse(rel_exprs < -expression_cutoff, -expression_cutoff, ifelse(rel_exprs > expression_cutoff, expression_cutoff, rel_exprs)))
+
+```
+
+## SPECTRUM cell type markers in TCGA cohort
+
+Top cluster markers differ in expression with respect to TCGA transcriptional sub type status. 
+
+### heatmaps
+
+Heatmaps show markers in columns and patients in rows. 
+
+```{r chunk_040, fig.width=30, fig.height=6}
+
+heatmap_layers <- list(
+  geom_tile(),
+  facet_grid(consensusOV~cluster, scales = "free", space = "free"),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank()),
+  scale_fill_gradient2(low = "steelblue", high = "red")
+)
+
+ggplot(filter(full_data, cell_type == "T.cell"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+```
+
+```{r chunk_041, fig.width=16, fig.height=6}
+
+ggplot(filter(full_data, cell_type == "Fibroblast"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+ggplot(filter(full_data, cell_type == "Myeloid.cell"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+ggplot(filter(full_data, cell_type == "Ovarian.cancer.cell"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+```
+
+```{r chunk_042, fig.width=30, fig.height=6}
+
+heatmap_layers <- list(
+  geom_tile(),
+  facet_grid(brca_group~cluster, scales = "free", space = "free"),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank()),
+  scale_fill_gradient2(low = "steelblue", high = "red")
+)
+
+ggplot(filter(full_data, cell_type == "T.cell"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+```
+
+```{r chunk_043, fig.width=16, fig.height=6}
+
+ggplot(filter(full_data, cell_type == "Fibroblast"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+ggplot(filter(full_data, cell_type == "Myeloid.cell"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+ggplot(filter(full_data, cell_type == "Ovarian.cancer.cell"),
+       aes(gene_id, sample_id, fill = cut_exprs)) +
+  heatmap_layers
+
+```
+
+
+```{r chunk_045, fig.width=12, fig.height=10}
+
+### boxplots
+
+cluster_summary <- full_data %>%
+  group_by(cluster, sample_id, consensusOV, cell_type) %>%
+  summarise(cluster_score = median(rel_exprs, na.rm = T))
+
+# plot_cOV <- function(cOV) {
+#   
+#   cluster_summary %>% 
+#     filter(consensusOV == cOV) %>% 
+#     group_by(cluster) %>% 
+#     mutate(median = median(cluster_score, na.rm = T)) %>% 
+#     ungroup() %>% 
+#     arrange(median) %>% 
+#     mutate(cluster = ordered(cluster, levels = unique(cluster))) %>% 
+#     ggplot(aes(cluster, cluster_score, color = cell_type)) +
+#     geom_boxplot() +
+#     geom_hline(yintercept = 0, linetype = 2) +
+#     scale_color_manual(values = clrs$cell_type) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+#     labs(title = cOV, x = "", y = "Marker gene score")
+#   
+# }
+# 
+# plot_grid(plot_cOV("Immunoreactive"),
+#           plot_cOV("Mesenchymal"),
+#           plot_cOV("Proliferative"),
+#           plot_cOV("Differentiated"), ncol = 2, align = "hv")
+
+```
+
+### score distributions
+
+```{r chunk_050, fig.width=7, fig.height=4}
+
+main_clusters_tbl <- cluster_summary %>% 
+  filter(cluster %in% c("M2.CXCL10", "Activated.CAF.TGFb")) %>% 
+  select(-cell_type) %>% 
+  spread(cluster, cluster_score) %>% 
+  mutate(diff_score = Activated.CAF.TGFb - M2.CXCL10) %>% 
+  gather(cluster, cluster_score, -c(1:2))
+
+ggplot(main_clusters_tbl) +
+  geom_density(aes(cluster_score, color = consensusOV)) +
+  scale_color_manual(values = clrs$consensusOV) +
+  facet_wrap(~cluster)
+
+```
+
+# Marker expression-based patient strata
+
+- low: 1st expression quartile
+- high: 4th expression quartile
+
+```{r chunk_055}
+
+strata_tbl <- full_data %>%
+  distinct(gene_id, sample_id, .keep_all = T) %>%
+  group_by(gene_id) %>%
+  mutate(q25 = quantile(cut_exprs, probs = 0.25, na.rm = T),
+         q75 = quantile(cut_exprs, probs = 0.75, na.rm = T),
+         strata = ifelse(cut_exprs < q25, "low", ifelse(cut_exprs > q75, "high", "mid"))) %>%
+  ungroup
+
+survplot_gene <- function(gene) {
+  data_tbl <- filter(strata_tbl, gene_id == gene, strata != "mid")
+  data_tbl$final_pfstm <- data_tbl$final_pfstm/12
+  fit <- survfit(Surv(final_pfstm, final_pfsid) ~ strata, data = data_tbl)
+ ggsurvplot(fit, data = data_tbl, palette = c("red", "steelblue")) +
+    labs(x = "Time [years]",
+         y = "PFS",
+         title = gene)
+}
+
+```
+
+## M2.CXCL10 marker {.tabset}
+
+```{r chunk_061, results="asis"}
+
+marker_c <- marker_tbl_ml$M2.CXCL10[marker_tbl_ml$M2.CXCL10 %in% full_data$gene_id][1:10] %>% na.omit()
+
+for(i in 1:length(marker_c)){
+
+  cat('###', marker_c[i],' \n')
+
+  print(survplot_gene(marker_c[i]))
+
+  cat(' \n \n')
+
+}
+
+```
+
+## M2.MARCO marker {.tabset}
+
+```{r chunk_062, results="asis"}
+
+marker_c <- marker_tbl_ml$M2.MARCO[marker_tbl_ml$M2.MARCO %in% full_data$gene_id][1:10] %>% na.omit()
+
+for(i in 1:length(marker_c)){
+
+  cat('###', marker_c[i],' \n')
+
+  print(survplot_gene(marker_c[i]))
+
+  cat(' \n \n')
+
+}
+
+```
+
+
+## TGFb.CAF marker {.tabset}
+
+```{r chunk_065, results="asis"}
+
+marker_c <- marker_tbl_fb$Activated.CAF.TGFb[marker_tbl_fb$Activated.CAF.TGFb %in% full_data$gene_id][1:10] %>% na.omit()
+
+for(i in 1:length(marker_c)){
+
+  cat('###', marker_c[i],' \n')
+
+  print(survplot_gene(marker_c[i]))
+
+  cat(' \n \n')
+
+}
+
+```
+
+
+
+# session info
+
+```{r chunk_999}
+
+devtools::session_info()
+
+```
+
+
