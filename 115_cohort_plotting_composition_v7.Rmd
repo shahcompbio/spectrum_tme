@@ -156,7 +156,7 @@ comp_tbl_consOV <- seu_tbl_full %>%
 cell_types_immune <- str_replace_all(names(cell_type_super_lookup[cell_type_super_lookup=="Immune"]), "\\.", " ")
 cell_types_stromal <- str_replace_all(names(cell_type_super_lookup[cell_type_super_lookup=="Stromal"]), "\\.", " ") %>% 
   str_replace_all("Ovarian", "Ov")
-  
+
 for(i in 1:length(cell_types_immune)){
   
   cat('#### ', cell_types_immune[i],' \n')
@@ -502,10 +502,10 @@ source("_src/global_vars.R")
 names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "\\.", " ")
 names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 
-# mpif_pixel <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v9/integrate/outputs/cohort_merge/patient/SPECTRUM/all/detection.tsv") %>%
+# mpif_pixel <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v10/integrate/outputs/cohort_merge/patient/SPECTRUM/all/detection.tsv") %>%
 #   select(cell_id, compartment = Parent)
-# 
-# mpif_cell_type <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v9/integrate/outputs/cohort_merge/patient/SPECTRUM/all/cell_type_manual.tsv") %>%
+#  
+# mpif_cell_type <- read_tsv("/work/shah/vazquezi/data/transfers/spectrum/results/mpif/v10/integrate/outputs/cohort_merge/patient/SPECTRUM/all/cell_type_manual.tsv") %>%
 #   left_join(mpif_pixel, by = "cell_id") %>%
 #   mutate(cell_id = str_remove_all(cell_id, "CD68.TOX.PD1.PDL1.CD8.panCK_CK8-18.DAPI_|_component_data - resolution #1")) %>%
 #   separate(cell_id, into = c("patient_id", "tumor_subsite", "fov_id", "cell_idx"),
@@ -580,9 +580,9 @@ names(clrs$cell_type) <- str_replace_all(names(clrs$cell_type), "Ovarian", "Ov")
 #     cell_type == "Other" ~ "Other"
 #   ))
 # 
-# write_tsv(mpif_cell_state_expanded, "/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded_v9.tsv")
+# write_tsv(mpif_cell_state_expanded, "/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded_v10.tsv")
 
-mpif_cell_state_expanded <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded_v9.tsv") %>%
+mpif_cell_state_expanded <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/mpIF/cell_type_manual_expanded_v10.tsv") %>%
   select(cell_id, slide_id, fov_id, compartment, cell_type, cell_state, contains("state")) %>%
   left_join(select(mpif_meta_tbl, slide_id, patient_id_short, tumor_supersite, tumor_subsite, therapy, sample_id, consensus_signature, tumor_megasite), by = "slide_id") %>%
   na.omit() %>% 
@@ -1204,9 +1204,6 @@ cor_plot_grid <- plot_grid(plotlist = cor_plot_list, ncol = 1, align = "hv")
 
 ```{r chunk_270, fig.width=12, fig.height=10}
 
-distinct(comp_tbl_sample, sample_id, sort_short_x) %>% group_by(sort_short_x) %>% tally
-distinct(mpif_cell_type, slide_id) %>% tally
-
 comp_grid_full <- ggdraw() +
   draw_plot(gcomp1, x = 0, y = 0, width = 1, height = 1) +
   draw_grob(vec_legend_shape, x = 0.54, y = 0.125, vjust = 0.5, hjust = 0) +
@@ -1294,16 +1291,18 @@ cd45p_lvls <- comp_tbl_sample %>%
   distinct(sample_id, sample_id_lvl)
 
 pbar_txga1 <- comp_tbl_consOV %>% 
+  mutate(alpha_highlight = F) %>% 
   filter(sort_short_x == "CD45-") %>% 
   left_join(cd45n_lvls, by = "sample_id") %>% 
   plot_comp_bar(sample_id_lvl, nrel, consensusOV, facet = patient_id_short) +
-  guides(fill = F)
+  remove_guides
 
 pbar_txga2 <- comp_tbl_consOV %>% 
+  mutate(alpha_highlight = F) %>% 
   filter(sort_short_x == "CD45+") %>% 
   left_join(cd45p_lvls, by = "sample_id") %>% 
   plot_comp_bar(sample_id_lvl, nrel, consensusOV, facet = patient_id_short) +
-  guides(fill = F)
+  remove_guides
 
 
 pgrid_supplement1 <- plot_grid(plist1$pbar1 + 
@@ -1334,6 +1333,7 @@ plist_mpif <- default_comp_grid_list(
 
 pbar_mpif_tumor <- mpif_cell_type_n_slide_compartment %>% 
   filter(sort_short_x == "Tumor") %>% 
+  mutate(alpha_highlight = F) %>% 
   left_join(mpif_lvls, by = "sample_id") %>% 
   mutate(cell_type = ordered(cell_type, levels = unique(c("CD8+", names(clrs$cell_type))))) %>% 
   plot_comp_bar(sample_id_lvl, nrel, cell_type, nmax = 750000, 
@@ -1343,6 +1343,7 @@ pbar_mpif_tumor <- mpif_cell_type_n_slide_compartment %>%
 
 pbar_mpif_stroma <- mpif_cell_type_n_slide_compartment %>% 
   filter(sort_short_x == "Stroma") %>% 
+  mutate(alpha_highlight = F) %>% 
   left_join(mpif_lvls, by = "sample_id") %>% 
   mutate(cell_type = ordered(cell_type, levels = unique(c("CD8+", names(clrs$cell_type))))) %>% 
   plot_comp_bar(sample_id_lvl, nrel, cell_type, nmax = 750000, 

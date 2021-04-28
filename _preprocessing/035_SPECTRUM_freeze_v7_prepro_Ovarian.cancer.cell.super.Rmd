@@ -380,6 +380,11 @@ seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", co
 seu_obj_sub_cancer <- subset(seu_obj_sub, subset = cluster_label %in% unique(grep("^Cancer", seu_obj_sub$cluster_label, value = T)))
 write_rds(seu_obj_sub_cancer, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/Ovarian.cancer.cancer_processed_filtered_annotated.rds"))
 
+set.seed(123)
+seu_obj_sample <- subset(seu_obj_sub, cells = seu_obj_sub$cell_id[sample(1:ncol(seu_obj_sub), 10000)])
+write_rds(seu_obj_sample, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated_sample.rds"))
+
+
 ```
 
 ## marker heatmap 

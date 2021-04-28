@@ -30,6 +30,7 @@ library(colorblindr)
 library(viridis)
 library(magick, lib.loc = "/home/uhlitzf/miniconda3/lib/R/library")
 library(ggpubr)
+library(knitr)
 
 ```
 
@@ -116,6 +117,8 @@ seu_tbl_full <- seu_tbl_full %>%
 ```{r chunk_040, fig.width=7.25, fig.height=8}
 
 dpi <- 72
+rw <- 10
+rh <- 10
 
 base_umap <- ggplot(seu_tbl_full) +
   coord_fixed() +
@@ -150,7 +153,7 @@ ncol1_legend <- list(
 )
 
 umap_site <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = tumor_supersite), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = tumor_supersite), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$tumor_supersite) +
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 2, 
@@ -158,7 +161,7 @@ umap_site <- base_umap +
 
 
 umap_site_mini <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = tumor_supersite), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = tumor_supersite), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$tumor_supersite) +
   guides(color = F)
 
@@ -166,19 +169,19 @@ umap_site_legend_ncol1 <- cowplot::get_legend(umap_site + ncol1_legend)
 umap_site_legend <- cowplot::get_legend(umap_site)
 
 umap_cell_type <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = fct_rev(cell_type)), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = fct_rev(cell_type)), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$cell_type) +
   ncol1_legend
 
 umap_cell_type_mini <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = cell_type), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = cell_type), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$cell_type) +
   guides(color = F)
 
 umap_cell_type_legend <- cowplot::get_legend(umap_cell_type)
 
 umap_patient <- base_umap + 
-  geom_point(aes(UMAP_1, UMAP_2, color = patient_id_short), size = pt.size, alpha = pt.alpha) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = patient_id_short), size = pt.size, alpha = pt.alpha, raster.dpi = 200, raster.width = 10, raster.height = 10) +
   scale_color_manual(values = clrs$patient_id_short) + 
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               nrow = 17, 
@@ -187,14 +190,14 @@ umap_patient <- base_umap +
         legend.spacing.x = unit(0, "npc"))
 
 umap_patient_mini <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = patient_id_short), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = patient_id_short), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$patient_id_short) +
   guides(color = F)
 
 # umap_patient_legend <- cowplot::get_legend(umap_patient)
 
 umap_consOV <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensusOV), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensusOV), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$consensusOV, labels = c("Immuno.", "Mesench.", "Prolif.", "Differen.")) + 
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 2, 
@@ -203,14 +206,14 @@ umap_consOV <- base_umap +
         legend.spacing.x = unit(0, "npc"))
 
 umap_consOV_mini <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensusOV), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensusOV), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$consensusOV) +
   guides(color = F)
 
 umap_consOV_legend <- cowplot::get_legend(umap_consOV)
 
 umap_mutsig <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensus_signature), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensus_signature), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$consensus_signature) + 
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 2, 
@@ -219,14 +222,14 @@ umap_mutsig <- base_umap +
         legend.spacing.x = unit(0, "npc"))
 
 umap_mutsig_mini <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensus_signature), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = consensus_signature), size = pt.size.mini, alpha = pt.alpha.mini, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$consensus_signature) +
   guides(color = F)
 
 umap_mutsig_legend <- cowplot::get_legend(umap_mutsig)
 
 umap_phase <- base_umap +
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = Phase), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = Phase), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   scale_color_manual(values = clrs$Phase) +
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1),
                               ncol = 1,
@@ -250,22 +253,22 @@ continuous_umap_layers <- list(
         plot.title = element_text(hjust = 0.5, vjust = 0.5, face = "plain", size = 18)))
 
 umap_umis <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = log2(nCount_RNA)), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = log2(nCount_RNA)), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   labs(title = "log2(#UMIs)", color = "") +
   continuous_umap_layers
 
 umap_genes <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = log2(nFeature_RNA)), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = log2(nFeature_RNA)), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   labs(title = "log2(#Genes)", color = "") +
   continuous_umap_layers
 
 umap_mitos <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = percent.mt), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = percent.mt), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   labs(title = "MT reads [%]", color = "") +
   continuous_umap_layers
 
 umap_doublet_score <- base_umap + 
-  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = doublet_score), size = pt.size, alpha = pt.alpha, raster.dpi = dpi) +
+  ggrastr::geom_point_rast(aes(UMAP_1, UMAP_2, color = doublet_score), size = pt.size, alpha = pt.alpha, raster.dpi = dpi, raster.width = rw, raster.height = rh) +
   labs(title = "Doublet score", color = "") +
   continuous_umap_layers
 
@@ -318,11 +321,14 @@ numbers_plot_tumor_supersite <- total_numbers_plot(tumor_supersite)
 
 ## Mixing per cell type
 
-```{r chunk_110, fig.width=3, fig.height=5}
+```{r chunk_110, fig.width=6, fig.height=9}
 
-pm_score_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v5/patient_mixing_scores.tsv") %>%
+pm_score_tbl <- read_tsv("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/patient_mixing_scores.tsv") %>%
   mutate(cell_type = str_replace_all(cell_type, "Monocyte", "Myeloid cell")) %>% 
-  mutate(cell_type = str_replace_all(cell_type, "Ovarian.cancer.cell", "Ov cancer cell"))
+  mutate(cell_type = str_replace_all(cell_type, "Ovarian.cancer.cell", "Ov cancer cell")) %>% 
+  mutate(patient_id_short = str_sub(cell_id, 13, 15)) %>% 
+  left_join(distinct(meta_tbl, patient_id_short, .keep_all = T), by = "patient_id_short") %>% 
+  filter(cell_type != "Other")
 
 pm_score_tbl_ordered <- pm_score_tbl %>%
   filter(cell_type != "Other") %>%
@@ -336,7 +342,7 @@ mixing_plot_cell_type <- ggplot(pm_score_tbl_ordered) +
   geom_violin(aes(cell_type, score, fill = cell_type),
               adjust = 3, color = "white", width = 1) +
   geom_boxplot(aes(cell_type, score, color = cell_type),
-               width = 0.2, size = 1, fill = NA, outlier.size = 0.01) +
+               width = 0.2, size = 1, fill = NA, outlier.shape = NA) +
   geom_boxplot(aes(cell_type, score, fill = cell_type),
                width = 0.2, color = "white", outlier.shape = NA) +
   geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
@@ -350,13 +356,73 @@ mixing_plot_cell_type <- ggplot(pm_score_tbl_ordered) +
   theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
         axis.title.x = element_blank())
 
-# ggsave("_fig/_paper/01_patient_mixing_plot_v5.pdf", mixing_plot_cell_type,
+
+
+# ggsave_nodb("_fig/_paper/01_patient_mixing_plot_v5.pdf", mixing_plot_cell_type,
 #        width = 3, height = 5)
 
+ggplot(pm_score_tbl) +
+  geom_violin(aes(consensus_signature, score, fill = consensus_signature),
+              adjust = 3, color = "white", width = 1) +
+  geom_boxplot(aes(consensus_signature, score, color = consensus_signature),
+               width = 0.2, size = 1, fill = NA, outlier.size = 0.01) +
+  geom_boxplot(aes(consensus_signature, score, fill = consensus_signature),
+               width = 0.2, color = "white", outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
+  scale_fill_manual(values = clrs$consensus_signature) +
+  scale_color_manual(values = clrs$consensus_signature) +
+  facet_wrap(~cell_type, scales = "free") + 
+  guides(fill = F, color = F) +
+  scale_y_continuous(expand = c(0, 0),
+                     limits = c(-5, 7),
+                     breaks = c(-4, -2, 0, 2, 4, 6)) +
+  labs(y = "Patient\nspecificity") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+ggsave_nodb("_fig/002_cohort/002_patient_mixing_mutsig.pdf", width = 6, height = 9)
+ggsave("_fig/002_cohort/002_patient_mixing_mutsig.png", width = 6, height = 9)
 
 ```
 
-```{r chunk_115, fig.width=3, fig.height=5}
+[_fig/002_cohort/002_patient_mixing_mutsig.pdf]("_fig/002_cohort/002_patient_mixing_mutsig.pdf")
+
+[_fig/002_cohort/002_patient_mixing_mutsig.png]("_fig/002_cohort/002_patient_mixing_mutsig.png")
+
+```{r chunk_111, fig.width=18, fig.height=9}
+
+ggplot(pm_score_tbl) +
+  geom_violin(aes(patient_id_short, score, fill = consensus_signature),
+              adjust = 3, color = "white", width = 1) +
+  geom_boxplot(aes(patient_id_short, score, color = consensus_signature),
+               width = 0.2, size = 1, fill = NA, outlier.size = 0.01) +
+  geom_boxplot(aes(patient_id_short, score, fill = consensus_signature),
+               width = 0.2, color = "white", outlier.shape = NA) +
+  geom_hline(yintercept = 0, linetype = 2, size = 0.5, color = "black") +
+  scale_fill_manual(values = clrs$consensus_signature) +
+  scale_color_manual(values = clrs$consensus_signature) +
+  facet_wrap(~cell_type, scales = "free") + 
+  guides(fill = F, color = F) +
+  scale_y_continuous(expand = c(0, 0),
+                     limits = c(-5, 7),
+                     breaks = c(-4, -2, 0, 2, 4, 6)) +
+  labs(y = "Patient\nspecificity") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+ggsave_nodb("_fig/002_cohort/002_patient_mixing_mutsig_patient.pdf", width = 18, height = 9)
+ggsave("_fig/002_cohort/002_patient_mixing_mutsig_patient.png", width = 18, height = 9)
+
+```
+
+[_fig/002_cohort/002_patient_mixing_mutsig_patient.pdf](_fig/002_cohort/002_patient_mixing_mutsig_patient.pdf)
+
+[_fig/002_cohort/002_patient_mixing_mutsig_patient.png](_fig/002_cohort/002_patient_mixing_mutsig_patient.png)
+
+
+## pairwise comparisons
+
+```{r chunk_115, fig.width=5, fig.height=4}
 
 ### pairwise comparisons
 
@@ -365,8 +431,17 @@ pm_score_summary <- pm_score_tbl_ordered %>%
   group_by(patient_id, cell_type) %>%
   summarise(mean_score = mean(score))
 
-ptt_tbl <- pairwise.t.test(pm_score_summary$mean_score, pm_score_summary$cell_type, p.adjust.method = "fdr") %$%
-  p.value %>%
+ptt_mat <- pairwise.t.test(pm_score_summary$mean_score, pm_score_summary$cell_type, p.adjust.method = "fdr") %$% 
+  p.value
+
+ptt_mat_full <- matrix(nrow = 9, ncol = 9)
+rownames(ptt_mat_full) <- unique(c(colnames(ptt_mat), rownames(ptt_mat)))
+colnames(ptt_mat_full) <- unique(c(colnames(ptt_mat), rownames(ptt_mat)))
+ptt_mat_full[upper.tri(ptt_mat_full)] <- 1
+ptt_mat_full[lower.tri(ptt_mat_full)] <- ptt_mat[lower.tri(ptt_mat, diag = T)]
+diag(ptt_mat_full) <- 1
+
+ptt_tbl <- ptt_mat_full %>% 
   as_tibble(rownames = "cell_type_1") %>%
   gather(cell_type_2, pvalue, -cell_type_1) %>%
   mutate(cell_type_2 = ordered(cell_type_2, levels = levels(pm_score_tbl_ordered$cell_type))) %>%
@@ -374,9 +449,9 @@ ptt_tbl <- pairwise.t.test(pm_score_summary$mean_score, pm_score_summary$cell_ty
   mutate(log10p = -log10(pvalue),
          sig = pvalue < 0.1,
          label = ifelse(sig, "*", "")) %>%
-  na.omit()
+  replace_na(list(pvalue = 1, log10p = 0, sig = F, label = ""))
 
-pm_comparisons <- ggplot(filter(ptt_tbl, sig)) +
+pm_comparisons <- ggplot(ptt_tbl) +
   # geom_tile(aes(fct_rev(cell_type_1), fct_rev(cell_type_2), fill = log10p)) +
   geom_point(aes(fct_rev(cell_type_1), fct_rev(cell_type_2), size = log10p), color = "black", shape = 21) +
   geom_point(aes(fct_rev(cell_type_1), fct_rev(cell_type_2), fill = log10p, size = log10p), shape = 21) +
@@ -385,7 +460,7 @@ pm_comparisons <- ggplot(filter(ptt_tbl, sig)) +
   # geom_point(aes(fct_rev(cell_type_1), fct_rev(cell_type_2), shape = sig),
   #           color = "black", size = 3) +
   scale_fill_gradientn(colours = viridis(9)) +
-  scale_size(guide = F) +
+  scale_size_continuous(guide = F, range = c(-1, 5)) +
   # scale_color_gradientn(colours = viridis(9)) +
   theme(aspect.ratio = 1,
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
@@ -394,9 +469,19 @@ pm_comparisons <- ggplot(filter(ptt_tbl, sig)) +
   scale_shape_manual(values = c("", "*"), guide = F) +
   # scale_x_discrete(expand = c(0, 0)) +
   # scale_y_discrete(expand = c(0, 0)) +
-  labs(fill = "-log10(p-value)", title = "Pairwise comparisons\nof patient specificity")
+  labs(fill = "-log10(q-value)", title = "Pairwise comparisons\nof patient specificity")
+
+pm_comparisons
+print(ptt_tbl, n = 100)
+
+ggsave_nodb("_fig/002_cohort/002_patient_mixing_tests.pdf", pm_comparisons, width = 5, height = 4)
+ggsave("_fig/002_cohort/002_patient_mixing_tests.png", pm_comparisons, width = 5, height = 4)
 
 ```
+
+[_fig/002_cohort/002_patient_mixing_tests.pdf](_fig/002_cohort/002_patient_mixing_tests.pdf)
+
+[_fig/002_cohort/002_patient_mixing_tests.png](_fig/002_cohort/002_patient_mixing_tests.png)
 
 ## consensusOV summary
 
@@ -448,9 +533,13 @@ tcga_heat_wide <- consOV_tbl_summary %>%
 # tcga_heat + guides(fill = F)
 tcga_heat_legend <- get_legend(tcga_heat)
 
+print(consOV_tbl_summary, n = 36)
+
 ```
 
 # Figure 2 upper panel
+
+## v7.1
 
 ```{r chunk_060, fig.width=20, fig.height=10}
 
@@ -473,7 +562,7 @@ add_umap_coord <- function(gg_obj) {
   return(p)
 }
 
-ggdraw() +
+full_grid1 <- ggdraw() +
   ## left
   draw_label("Patient", x = 0.25, y = 0.98, size = 20) +
   draw_plot(add_umap_coord(umap_patient), x = 0, y = 0, width = 0.5, height = 1) +
@@ -498,14 +587,23 @@ ggdraw() +
   draw_grob(umap_mutsig_legend, x = 0.52+0.5*0.33, y = -0.67, hjust = 0, vjust = 0) +
   draw_grob(umap_site_legend, x = 0.52+0.5*0.66, y = -0.67, hjust = 0, vjust = 0)
 
-ggsave(filename = "_fig/002_cohort/002_cohort_umaps_v7.png", width = 20, height = 10)
-ggsave(filename = "_fig/002_cohort/002_cohort_umaps_v7.pdf", width = 20, height = 10)
+full_grid1
+full_grid1_rds <- list(rds = full_grid1, width = 20, height = 10)
+write_rds(full_grid1, "_fig/002_cohort/002_cohort_umaps_v7.1.rds")
+ggsave(filename = "_fig/002_cohort/002_cohort_umaps_v7.1.png", full_grid1, width = 20, height = 10)
+ggsave_nodb(filename = "_fig/002_cohort/002_cohort_umaps_v7.1.pdf", full_grid1, width = 20, height = 10)
 
 ```
 
+[_fig/002_cohort/002_cohort_umaps_v7.1.pdf](_fig/002_cohort/002_cohort_umaps_v7.1.pdf)
+
+[_fig/002_cohort/002_cohort_umaps_v7.1.png](_fig/002_cohort/002_cohort_umaps_v7.1.png)
+
+## v7.2
+
 ```{r chunk_065, fig.width=20, fig.height=10}
 
-ggdraw() +
+full_grid2 <- ggdraw() +
   ## left
   draw_label("Patient", x = 0.25, y = 0.98, size = 20) +
   draw_plot(add_umap_coord(umap_patient), x = 0, y = 0, width = 0.5, height = 1) +
@@ -527,10 +625,55 @@ ggdraw() +
   draw_grob(tcga_heat_legend, x = 0.68, y = -0.35) +
   draw_grob(umap_consOV_legend, x = 0.52+0.5*0, y = -0.67, hjust = 0, vjust = 0)
 
-ggsave(filename = "_fig/002_cohort/002_cohort_umaps_v7.png", width = 20, height = 10)
-ggsave(filename = "_fig/002_cohort/002_cohort_umaps_v7.pdf", width = 20, height = 10)
+full_grid2
+full_grid2_rds <- list(rds = full_grid2, width = 20, height = 10)
+write_rds(full_grid2, "_fig/002_cohort/002_cohort_umaps_v7.2.rds")
+ggsave(filename = "_fig/002_cohort/002_cohort_umaps_v7.2.png", full_grid2, width = 20, height = 10)
+ggsave_nodb(filename = "_fig/002_cohort/002_cohort_umaps_v7.2.pdf", full_grid2, width = 20, height = 10)
 
 ```
+
+[_fig/002_cohort/002_cohort_umaps_v7.2.pdf](_fig/002_cohort/002_cohort_umaps_v7.2.pdf)
+
+[_fig/002_cohort/002_cohort_umaps_v7.2.png](_fig/002_cohort/002_cohort_umaps_v7.2.png)
+
+## v7.3
+
+```{r chunk_070, fig.width=20, fig.height=10}
+
+full_grid3 <- ggdraw() +
+  ## left
+  draw_label("Patient", x = 0.25, y = 0.98, size = 20) +
+  draw_plot(add_umap_coord(umap_patient), x = 0, y = 0, width = 0.5, height = 1) +
+  draw_label(paste0("n = ", nrow(seu_tbl_full)), 
+             x = 0.25, y = 0.03, size = 16, hjust = 0) + 
+  ## right upper
+  draw_label("Cell type", x = 0.53+0.5*0, y = 0.98, size = 20, hjust = 0) +
+  draw_plot(numbers_plot_cell_type, x = 0.52+0.5*0 , y = 0.651, width = 0.13, height = 0.315) +
+  draw_plot(umap_cell_type_mini, x = 0.64, y = 0.68, width = 0.5*1/3, height = 0.31) +
+  draw_plot(mixing_plot_cell_type, x = 0.83, y = 0.66, width = 0.5*0.3, height = 0.33) +
+  ## right middle
+  draw_label("TCGA", x = 0.53+0.5*0, y = 0.6, size = 20, hjust = 0) +
+  draw_plot(umap_consOV_mini, x = 0.5+0.5*0, y = 0.3, width = 0.5*1/3, height = 0.31) +
+  draw_label("Site", x = 0.725, y = 0.6, size = 20, hjust = 0) +
+  draw_plot(numbers_plot_tumor_supersite, x = 0.715, y = 0.34, width = 0.13, height = 0.25) +
+  draw_plot(umap_site_mini, x = 0.5+0.5*0.66, y = 0.3, width = 0.5*1/3, height = 0.31) +
+  ## right lower
+  draw_plot(tcga_heat + guides(fill = F), x = 0.49+0.5*0, y = -0.03, width = 0.18, height = 0.3) +
+  draw_grob(tcga_heat_legend, x = 0.68, y = -0.35) +
+  draw_grob(umap_consOV_legend, x = 0.52+0.5*0, y = -0.67, hjust = 0, vjust = 0)
+
+full_grid3
+full_grid3_rds <- list(rds = full_grid3, width = 20, height = 10)
+write_rds(full_grid3, "_fig/002_cohort/002_cohort_umaps_v7.3.rds")
+ggsave(filename = "_fig/002_cohort/002_cohort_umaps_v7.3.png", full_grid3, width = 20, height = 10)
+ggsave_nodb(filename = "_fig/002_cohort/002_cohort_umaps_v7.3.pdf", full_grid3, width = 20, height = 10)
+
+```
+
+[_fig/002_cohort/002_cohort_umaps_v7.3.pdf](_fig/002_cohort/002_cohort_umaps_v7.3.pdf)
+
+[_fig/002_cohort/002_cohort_umaps_v7.3.png](_fig/002_cohort/002_cohort_umaps_v7.3.png)
 
 # S1
 
@@ -600,34 +743,15 @@ figS1_panel <- ggdraw() +
   draw_label("C", x = 0.52, y = 0.48, fontface = "bold", size = 22)
 
 figS1_panel
-ggsave("_fig/002_cohort/002_supplementary_umap_v7.pdf", figS1_panel, width = 16, height = 9)
-
-```
-
-```{r chunk_061, fig.width=18, fig.height=7}
-
-# xf <- 1.33
-# 
-# ggdraw() +
-#   draw_plot(add_umap_coord(umap_site), x = 0, y = 0, width = 0.5/xf, height = 1) +
-#   draw_plot(umap_patient_mini, x = 0.5/xf, y = 0.5, width = 0.25/xf, height = 0.5) +
-#   draw_plot(umap_cell_type_mini, x = 0.5/xf, y = 0, width = 0.25/xf, height = 0.5) +
-#   draw_plot(umap_mutsig_mini, x = 0.94/xf, y = 0.5, width = 0.25/xf, height = 0.5) +
-#   draw_plot(umap_consOV_mini, x = 0.94/xf, y = 0, width = 0.25/xf, height = 0.5) +
-#   draw_grob(umap_cell_type_legend, x = 0.56, y = -0.53, hjust = 0, vjust = 0) +
-#   draw_plot(total_numbers_cell_type, x = 0.565, y = 0.005, width = 0.13, height = 0.45) +
-#   draw_grob(umap_patient_legend, x = 0.56, y = -0.05, hjust = 0, vjust = 0) +
-#   draw_grob(umap_mutsig_legend, x = 0.9, y = -0.05, hjust = 0, vjust = 0) +
-#   draw_grob(umap_consOV_legend, x = 0.9, y = -0.55, hjust = 0, vjust = 0) +
-#   draw_label("Site", x = 0.26/xf, y = 0.98, size = 20) +
-#   draw_label("Patient", x = 0.52/xf, y = 0.98, size = 20, hjust = 0) +
-#   draw_label("Cell type", x = 0.52/xf, y = 0.49, size = 20, hjust = 0) +
-#   draw_label("Signature", x = 0.95/xf, y = 0.98, size = 20, hjust = 0) +
-#   draw_label("TCGA", x = 0.95/xf, y = 0.49, size = 20, hjust = 0)
-# 
-# # ggsave(filename = "_fig/001x_umaps_mutsig.png", width = 16, height = 7)
-# ggsave(filename = "_fig/001x_umaps_mutsig.pdf", width = 18, height = 7)
+figS1_panel_rds <- list(rds = figS1_panel, width = 16, height = 9)
+ggsave("_fig/002_cohort/002_supplementary_umap_v7.png", figS1_panel, width = 16, height = 9)
+ggsave_nodb("_fig/002_cohort/002_supplementary_umap_v7.pdf", figS1_panel, width = 16, height = 9)
+write_rds(figS1_panel_rds, "_fig/002_cohort/002_supplementary_umap_v7.rds")
 
 
 ```
+
+[_fig/002_cohort/002_supplementary_umap_v7.pdf](_fig/002_cohort/002_supplementary_umap_v7.pdf)
+
+[_fig/002_cohort/002_supplementary_umap_v7.png](_fig/002_cohort/002_supplementary_umap_v7.png)
 

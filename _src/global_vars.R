@@ -21,7 +21,14 @@ remove_yaxis <- theme(axis.title.y = element_blank(),
 
 remove_guides <- guides(color = F, fill = F, shape = F, alpha = F, size = F)
 
-
+ggsave_nodb <- function(filename, plot = last_plot(), device = NULL, path = NULL, 
+                        scale = 1, width = NA, height = NA, units = c("in", "cm", "mm"), 
+                        dpi = 300, limitsize = TRUE, useDingbats = FALSE, ...) {
+  ggsave(filename = filename, plot = plot, device = device, path = path, 
+         scale = scale, width = width, height = height, units = units, 
+         dpi = dpi, limitsize = limitsize, useDingbats = useDingbats, ...)
+}
+  
 ## umap helpers --------------------------------------
 
 arrow <- arrow(angle = 20, type = "closed", length = unit(0.1, "npc"))

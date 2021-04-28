@@ -381,6 +381,9 @@ broad_pws <- read_lines("_data/small/signatures/h.all.v7.2.symbols.gmt") %>%
 # write_rds(seu_obj_sub, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
 seu_obj_sub <- read_rds(paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated.rds"))
 
+set.seed(123)
+seu_obj_sample <- subset(seu_obj_sub, cells = seu_obj_sub$cell_id[sample(1:ncol(seu_obj_sub), 10000)])
+write_rds(seu_obj_sample, paste0("/work/shah/uhlitzf/data/SPECTRUM/freeze/v7/", coi, "_processed_filtered_annotated_sample.rds"))
 
 ```
 
